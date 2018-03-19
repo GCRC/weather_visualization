@@ -1,0 +1,14 @@
+svg {
+    border: 1px solid #333333;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: black;
+}
+
+.axis text {
+    font-size: 10px; 
+    font-family: sans-serif;
+}
