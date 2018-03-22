@@ -37,18 +37,26 @@ function weatherVisualization(){
             .attr('width', this.width)
             .attr('height', this.height);
 
+        var airTempGraphProperties = {
+            dataset:this.dataset,
+            leftMargin: 200,
+            topMargin: 50
+        };
+
         // Add a graph to the svg
-        this.tempGraph = new lineGraph(this.dataset);
+        this.tempGraph = new lineGraph(airTempGraphProperties);
     };
 };
 
 // Line graph constructor
-function lineGraph(data){
+function lineGraph(properties){
     var _this = this;
-    this.dataset = data;
-    this.margin = {top: 20, right: 20, bottom: 20, left: 30};
-    this.height = 300 - this.margin.top - this.margin.bottom;
-    this.width = 800 - this.margin.left - this.margin.right;
+    this.dataset = properties.dataset;
+    this.leftMargin = properties.leftMargin;
+    this.topMargin = properties.topMargin;
+    this.padding = {top: 20, right: 20, bottom: 20, left: 30};
+    this.height = 300 - this.padding.top - this.padding.bottom;
+    this.width = 800 - this.padding.left - this.padding.right;
 
     // Define the xScale
     this.xScale = d3.scale.linear()
@@ -60,7 +68,7 @@ function lineGraph(data){
             var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
             return timeHours;
         })])
-        .range([this.margin.left, this.width]);
+        .range([this.padding.left, this.width]);
 
 
     // Define the yScale
@@ -74,7 +82,7 @@ function lineGraph(data){
                     return 0;
                 };
             })])
-        .range([this.margin.top, this.height]);
+        .range([this.padding.top, this.height]);
 
     // Define the yAxis
     this.yAxis = d3.svg.axis()
@@ -97,8 +105,15 @@ function lineGraph(data){
                 return _this.xScale(timeHours); 
             })
             .y(function(d) { 
-                //var airTemp = (parseInt(d.temp_air) !== -9999)?parseInt(d.temp_air):0;
-                //return _this.yScale(airTemp); 
+                return _this.yScale(parseInt(d.temp_air)); 
+            });
+
+        this.line = d3.svg.line()
+            .x(function(d) { 
+                var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
+                return _this.xScale(timeHours); 
+            })
+            .y(function(d) { 
                 return _this.yScale(parseInt(d.temp_air)); 
             });
         
@@ -106,19 +121,19 @@ function lineGraph(data){
         this.svg.append("path")
             .datum(_this.dataset)
             .attr("class", "line")
-            .attr("transform", "translate(200,0)")
+            .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
             .attr("d", this.line);
 
         // Add y axis to graph
         this.svg.append("g")
             .attr("class", "axis")
-            .attr("transform", "translate(" + parseInt(_this.margin.left  + 200) +",0)")
+            .attr("transform", "translate(" + parseInt(_this.padding.left + _this.leftMargin) + "," + _this.topMargin + ")")
             .call(this.yAxis)
             
         // Add x axis to graph
         this.svg.append("g")
             .attr("class", "axis")
-            .attr("transform", "translate(200," + _this.height + ")")
+            .attr("transform", "translate(" + _this.leftMargin + "," + parseInt(_this.height + _this.topMargin) + ")")
             .call(this.xAxis);
     };
 
