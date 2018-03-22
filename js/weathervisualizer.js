@@ -9,72 +9,94 @@ function weatherVisualization(){
 
     this.updateDataset = function(data){
         this.dataset = data;
+        this.drawVisualization();
     };
 
     this.getDataset = function(){
         return this.dataset;
     };
 
-    this.svg = d3.select('body')
-        .append('svg')
-        .attr('width', this.width)
-        .attr('height', this.height);
+    this.drawVisualization = function(){
 
-    this.tempGraph = new lineGraph(this.dataset);
-    this.tempGraph.setPosition(300, 0);
+        // If svg already exists remove it before creating a new one
+        if (!d3.select('body svg').empty() ){
+            d3.select('svg').remove();
 
+        };
+
+        // Draw svg 
+        this.svg = d3.select('body')
+            .append('svg')
+            .attr('width', this.width)
+            .attr('height', this.height);
+
+        // Add a graph to the svg
+        this.tempGraph = new lineGraph(this.dataset);   
+    };
 };
 
+// Line graph constructor
 function lineGraph(data){
-    this.xPos = 0;
-    this.yPos = 0;
-    this.width = 700;
-    this.height = 200;
+    var _this = this;
     this.dataset = data;
 
-    this.setPosition = function(x, y){
-        this.xPos = x;
-        this.yPos = y;
+    // Define the xScale
+    this.xScale = d3.scale.linear()
+        .domain([d3.min(this.dataset, function(d){
+            var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
+            return timeHours;
+        }), 
+        d3.max(this.dataset, function(d){
+            var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
+            return timeHours;
+        })])
+        .range([0, this.width]);
 
-        // redraw graph
-        this.drawGraph();
-    };
-
-    this.setYAxisValue = function(){
-        return;
-    };
 
     // Define the yScale
     this.yScale = d3.scale.linear()
-    .domain([d3.min(this.dataset, function(d){
-        return d.temp_air}
-        ), 
-        d3.max(this.dataset, function(d){
-            return d.temp_air}
-        )])
-    .range([0, this.height]);
+        // .domain([d3.min(this.dataset, function(d){
+        //     if (d.temp_air && parseInt(d.temp_air) !== -9999){
+        //         return parseInt(d.temp_air);
+        //     } else {
+        //         return 0;
+        //     };
+        // }),
+        // d3.max(this.dataset, function(d){
+        //     return d.temp_air})])
+        .domain([-50,50])
+        .range([0, this.height]);
 
-    // Define the xAxis
-    this.yAxis = d3.svg.axis()
-                    .scale(this.yScale)
-                    .orient("left");
+    // // Define the xAxis
+    // this.yAxis = d3.svg.axis()
+    //                 .scale(this.yScale)
+    //                 .orient("left");
 
     this.drawGraph = function(){
+        var _this = this;
         this.svg = d3.select('body svg');
 
-        this.graph = this.svg.append('g')
-        .attr('width',this.width)
-        .attr('height',this.height)
-        .attr('x', this.xPos)
-        .attr('y', this.yPos);
+        this.svg.selectAll("circle")
+            .data(_this.dataset)
+            .enter()
+            .append("circle")
+            .attr('r',2)
+            .attr('cx',function(d){
+                var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
+                return _this.xScale(timeHours);
+            })
+            .attr('cy',function(d){
+                var airTemp = (parseInt(d.temp_air) !== -9999)?parseInt(d.temp_air):0;
+                return _this.yScale(airTemp);
+            });
 
-        this.graph.append('g')
-            .attr('class','axis')
-            .call(this.yAxis);
+        // this.graph.append('g')
+        //     .attr('class','axis')
+        //     .call(this.yAxis);
     };
 
     // Draw graph
-    //this.drawGraph();
+    this.drawGraph();
 };
 
 d3.csv(csvFile1, function(d){
