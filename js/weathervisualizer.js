@@ -103,6 +103,23 @@
             this._drawVisualization();
         },
 
+        _convertDates: function(data){
+
+            // Loop through all filtered data and add date objects based on temporal coloumn data
+            for( var i = 0, e = data.length; i < e; i++ ){
+
+                var row = data[i];
+                var year = row.year;
+                var month = row.month -1; // month range = 0 - 11 
+                var day = row.day;
+                var hour = row.hour;
+
+                // Add new date property to row containing new date object
+                row.date = new Date(year, month, day, hour);
+            };
+            return data;
+        },
+
         _loadCSVDataset: function(csvFile){
             var _this = this;
 
@@ -115,6 +132,8 @@
                         return d;
                     };
                 });
+
+                dataset = _this._convertDates(dataset);
 
                 _this._updateDataset(dataset);
             });
@@ -168,7 +187,7 @@
                 topMargin: lineGraphTopMargin + ((this.height/3)*2)
             };
     
-            // Add a graph to the svg
+            // Add line graphs to the svg
             this.tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
             this.windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
             this.pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
@@ -246,15 +265,8 @@
             };
 
             // Define the xScale
-            this.xScale = $d.scale.linear()
-                .domain([$d.min(this.dataset, function(d){
-                    var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
-                    return timeHours;
-                }), 
-                $d.max(this.dataset, function(d){
-                    var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
-                    return timeHours;
-                })])
+            this.xScale = $d.time.scale()
+                .domain([ this.dataset[0].date, this.dataset[this.dataset.length - 1].date])
                 .range([this.padding.left, this.width]);
 
             // Define the yScale
@@ -269,13 +281,15 @@
             // Define the yAxis
             this.yAxis = $d.svg.axis()
                 .scale(this.yScale)
-                .ticks(6)
+                .ticks(5)
                 .orient("left");
 
             // Define the xAxis
             this.xAxis = $d.svg.axis()
+                //.scale(this.xScale)
                 .scale(this.xScale)
                 .ticks(6)
+                .tickFormat(d3.time.format("%y/%m/%d"))
                 .orient("bottom");
     
             // Draw graph
@@ -288,8 +302,7 @@
     
             this.line = $d.svg.line()
                 .x(function(d) { 
-                    var timeHours = (parseInt(d.month) * 30 * 24) + (parseInt(d.day) * 24) + parseInt(d.hour);
-                    return _this.xScale(timeHours); 
+                    return _this.xScale(d.date); 
                 })
                 .y(function(d) { 
                     return _this.yScale(parseInt(d[_this.dependentVar])); 
