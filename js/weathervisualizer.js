@@ -160,9 +160,10 @@
             var airTempGraphProperties = {
                 dataset: this.dataset,
                 dependentVar: "temp_air",
+                dependentLabel: "Air Temperature °C",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
-                height: (this.height/3) - lineGraphTopMargin,
+                height: ((this.height - lineGraphTopMargin)/3),
                 leftMargin: lineGraphLeftMargin,
                 topMargin: lineGraphTopMargin
             };
@@ -170,9 +171,10 @@
             var windSpeedGraphProperties = {
                 dataset: this.dataset,
                 dependentVar: "wind_speed",
+                dependentLabel: "Wind Speed km/hr",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
-                height: (this.height/3) - lineGraphTopMargin,
+                height: ((this.height - lineGraphTopMargin)/3),
                 leftMargin: lineGraphLeftMargin,
                 topMargin: lineGraphTopMargin + this.height/3
             };
@@ -180,9 +182,10 @@
             var pressureGraphProperties = {
                 dataset: this.dataset,
                 dependentVar: "pressure",
+                dependentLabel: "Pressure kPa",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
-                height: (this.height/3) - lineGraphTopMargin,
+                height: ((this.height - lineGraphTopMargin)/3),
                 leftMargin: lineGraphLeftMargin,
                 topMargin: lineGraphTopMargin + ((this.height/3)*2)
             };
@@ -210,9 +213,10 @@
 
         dataset: null,
         dependentVar: null,
+        dependentLabel: null,
         leftMargin: null,
         topMargin: null,
-        padding: {top: 20, right: 20, bottom: 20, left: 30},
+        padding: {top: 0, right: 0, bottom: 100, left: 60},
         height: null,
         width: null,
         xScale: null,
@@ -252,6 +256,12 @@
                 throw new Error('Dependednt variable not provided for line graph');
             };
 
+            if( opts.dependentLabel ){ 
+                this.dependentLabel = opts.dependentLabel;
+            } else {
+                throw new Error('Dependednt variable not provided for line graph');
+            };
+
             if( opts.leftMargin ){ 
                 this.leftMargin = opts.leftMargin;
             } else {
@@ -264,13 +274,30 @@
                 throw new Error('Top margin not provided for line graph');
             };
 
-            // Define the xScale
-            this.xScale = $d.time.scale()
+            // Define Scales
+            this.xScale = this._defineXScale();
+            this.yScale = this._defineYScale();
+
+            // Define the Axis
+            this.xAxis = this._defineXAxis();
+            this.yAxis = this._defineYAxis();
+    
+            // Draw graph
+            this._drawLineGraph();
+        },
+
+        _defineXScale: function(){
+            var xScale = $d.time.scale()
                 .domain([ this.dataset[0].date, this.dataset[this.dataset.length - 1].date])
                 .range([this.padding.left, this.width]);
 
-            // Define the yScale
-            this.yScale = $d.scale.linear()
+            return xScale;
+        },
+
+        _defineYScale: function(){
+            var _this = this;
+
+            var yScale = $d.scale.linear()
                 .domain([$d.max(this.dataset, function(d){
                     return parseInt(d[_this.dependentVar])}),
                     $d.min(this.dataset, function(d){
@@ -278,54 +305,76 @@
                 ])
                 .range([this.padding.top, this.height]);
 
-            // Define the yAxis
-            this.yAxis = $d.svg.axis()
-                .scale(this.yScale)
-                .ticks(5)
-                .orient("left");
+            return yScale;
+        },
 
-            // Define the xAxis
-            this.xAxis = $d.svg.axis()
-                //.scale(this.xScale)
+        _defineXAxis: function(){
+            var xAxis = $d.svg.axis()
                 .scale(this.xScale)
                 .ticks(6)
                 .tickFormat(d3.time.format("%y/%m/%d"))
                 .orient("bottom");
-    
-            // Draw graph
-            this._drawLineGraph();
+            
+            return xAxis;
+        },
+
+        _defineYAxis: function(){
+            var yAxis = $d.svg.axis()
+                .scale(this.yScale)
+                .ticks(5)
+                .orient("left");
+
+            return yAxis;
         },
 
         _drawLineGraph: function(){
             var _this = this;
-            this.svg = $d.select('#content svg');
+            var svg = $d.select('#content svg');
     
-            this.line = $d.svg.line()
+            var line = $d.svg.line()
                 .x(function(d) { 
                     return _this.xScale(d.date); 
                 })
                 .y(function(d) { 
                     return _this.yScale(parseInt(d[_this.dependentVar])); 
                 });
+
+            var lineGraph = svg.append("g")
+                .attr("class", _this.dependentVar + "_graph");
             
             // Add path of line graph
-            this.svg.append("path")
+            lineGraph.append("path")
                 .datum(_this.dataset)
                 .attr("class", "line")
                 .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
-                .attr("d", this.line);
+                .attr("d", line);
     
             // Add y axis to graph
-            this.svg.append("g")
+            var yAxis = lineGraph.append("g")
                 .attr("class", _this.dependentVar + "_axis axis")
                 .attr("transform", "translate(" + parseInt(_this.padding.left + _this.leftMargin) + "," + _this.topMargin + ")")
                 .call(this.yAxis)
-                
+
+            // Added yAxis Label
+            yAxis.append("text")
+                .text(_this.dependentLabel)
+                .attr("class","axis_label")
+                .attr("x",0-(_this.height/2))
+                .attr("y",-40)
+                .attr("transform", "rotate(270)");
+
             // Add x axis to graph
-            this.svg.append("g")
+            var xAxis = lineGraph.append("g")
                 .attr("class", _this.dependentVar + "_axis axis")
                 .attr("transform", "translate(" + _this.leftMargin + "," + parseInt(_this.topMargin + _this.height) + ")")
                 .call(this.xAxis);
+
+            // Added xAxis label
+            xAxis.append("text")
+                .text("Date (YY/MM/DD)")
+                .attr("class","axis_label")
+                .attr("x",_this.width/2)
+                .attr("y",40);
         }
     });
     
