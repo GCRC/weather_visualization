@@ -21,7 +21,9 @@
         containerId: null,
         dataset: null,
         csvFiles: null,
-	    dispatchService: null,
+        dispatchService: null,
+        width: null,
+        height: null,
         
         initialize: function(opts_){
     
@@ -33,19 +35,35 @@
             },opts_);
             
             var _this = this;
-		
+
             if (opts.config) {
                 if (opts.config.directory) {
                     this.dispatchService = opts.config.directory.dispatchService;
                 };
             };
 
+            if (this.dispatchService) {
+             
+                // Register with dispatch service
+                var f = function(m, addr, dispatcher){
+                    _this._handle(m, addr, dispatcher);
+                };
+    
+                this.dispatchService.register(DH, 'windowResized', f);
+            };
+
+
             if( opts.widgetOptions ){ 
                 this.containerId = "#" + opts.widgetOptions.containerId;
                 this.csvFiles = opts.widgetOptions.csvFiles;
             };
             
-            if( !this.containerId ){
+            if( this.containerId ){
+                // if containerId defined, than calculate svg width and height values
+                this._getWindowHeight();
+                this._getWindowWidth();
+            }
+            else {
                 throw new Error('containerId must be specified');
             }; 
 
@@ -61,6 +79,22 @@
             //this._drawVisualization();
             
             $n2.log("Clyde River Weather Station Data Visualizer: ", this);
+        },
+
+        _getWindowWidth: function(){
+            // Acquire width value for the container element
+            var $containerWidth = $(this.containerId).width();
+            var svgPadding = 20;
+
+            this.width = $containerWidth - svgPadding;
+        },
+
+        _getWindowHeight: function(){
+            // Acquire height value for the container element
+            var $containerHeight = $(this.containerId).height();
+            var svgPadding = 20;
+
+            this.height = $containerHeight - svgPadding;
         },
 
         _updateDataset: function(data){
@@ -89,15 +123,15 @@
         _drawVisualization: function(){
 
             // If svg already exists remove it before creating a new one
-            if (!$d.select(this.containerId + 'svg').empty() ){
+            if (!$d.select(this.containerId + ' svg').empty() ){
                 $d.select('svg').remove();
             };
     
             // Draw svg 
             var svg = $d.select(this.containerId)
                 .append('svg')
-                    .attr('width', 1000)
-                    .attr('height', 700);
+                    .attr('width', this.width)
+                    .attr('height', this.height);
     
             var airTempGraphProperties = {
                 dataset: this.dataset,
@@ -108,7 +142,18 @@
     
             // Add a graph to the svg
             this.tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
-        }
+        },
+
+        _handle: function(m){
+            if( 'windowResized' === m.type ){
+                // Update svg width and height
+                this._getWindowHeight(m);
+                this._getWindowWidth(m);
+
+                // Re-draw visualization
+                this._drawVisualization();
+            };
+        }   
     });
 
     //--------------------------------------------------------------------------
