@@ -24,6 +24,7 @@
         dispatchService: null,
         width: null,
         height: null,
+        svgPadding: 10,
         
         initialize: function(opts_){
     
@@ -84,7 +85,7 @@
         _getWindowWidth: function(){
             // Acquire width value for the container element
             var $containerWidth = $(this.containerId).width();
-            var svgPadding = 20;
+            var svgPadding = this.svgPadding * 2;
 
             this.width = $containerWidth - svgPadding;
         },
@@ -92,7 +93,7 @@
         _getWindowHeight: function(){
             // Acquire height value for the container element
             var $containerHeight = $(this.containerId).height();
-            var svgPadding = 20;
+            var svgPadding = this.svgPadding * 2;
 
             this.height = $containerHeight - svgPadding;
         },
@@ -107,15 +108,15 @@
 
             $d.csv(csvFile, function(d){
 
-                // filter out null values from dataset
+                // filter out all rows with null air temperture, wind speed and barometric pressure values from the dataset
                 var dataset = d.filter(function(d) {
-                    if( d.temp_air !== "-9999" ){
+                    var nullValue = "-9999";
+                    if( d.temp_air !== nullValue && d.pressure !== nullValue && d.wind_speed !== nullValue ){
                         return d;
                     };
-                  });
+                });
 
-                  //console.log("Dataset Length: " + dataset.length);
-                  _this._updateDataset(dataset);
+                _this._updateDataset(dataset);
             });
         },
         
@@ -131,17 +132,46 @@
             var svg = $d.select(this.containerId)
                 .append('svg')
                     .attr('width', this.width)
-                    .attr('height', this.height);
+                    .attr('height', this.height)
+                    .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
     
+            var lineGraphTopMargin = 50;
+            var lineGraphLeftMargin = 400;
+            
             var airTempGraphProperties = {
                 dataset: this.dataset,
+                dependentVar: "temp_air",
                 dispatchService: this.dispatchService,
-                leftMargin: 200,
-                topMargin: 50
+                width: this.width - lineGraphLeftMargin,
+                height: (this.height/3) - lineGraphTopMargin,
+                leftMargin: lineGraphLeftMargin,
+                topMargin: lineGraphTopMargin
+            };
+
+            var windSpeedGraphProperties = {
+                dataset: this.dataset,
+                dependentVar: "wind_speed",
+                dispatchService: this.dispatchService,
+                width: this.width - lineGraphLeftMargin,
+                height: (this.height/3) - lineGraphTopMargin,
+                leftMargin: lineGraphLeftMargin,
+                topMargin: lineGraphTopMargin + this.height/3
+            };
+
+            var pressureGraphProperties = {
+                dataset: this.dataset,
+                dependentVar: "pressure",
+                dispatchService: this.dispatchService,
+                width: this.width - lineGraphLeftMargin,
+                height: (this.height/3) - lineGraphTopMargin,
+                leftMargin: lineGraphLeftMargin,
+                topMargin: lineGraphTopMargin + ((this.height/3)*2)
             };
     
             // Add a graph to the svg
             this.tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
+            this.windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
+            this.pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
         },
 
         _handle: function(m){
@@ -160,6 +190,7 @@
     var WeatherDataVisualizerLineGraph = $n2.Class('WeatherDataVisualizerLineGraph', {
 
         dataset: null,
+        dependentVar: null,
         leftMargin: null,
         topMargin: null,
         padding: {top: 20, right: 20, bottom: 20, left: 30},
@@ -181,8 +212,8 @@
             },opts_);
             
             var _this = this;            
-            this.height = 300 - this.padding.top - this.padding.bottom;
-            this.width = 800 - this.padding.left - this.padding.right;
+            this.height = opts.height - this.padding.top - this.padding.bottom;
+            this.width = opts.width - this.padding.left - this.padding.right;
             
             if( opts.dispatchService ){
                 this.dispatchService = opts.dispatchService;
@@ -194,6 +225,12 @@
                 this.dataset = opts.dataset;
             } else {
                 throw new Error('Dataset not provided for line graph');
+            };
+
+            if( opts.dependentVar ){ 
+                this.dependentVar = opts.dependentVar;
+            } else {
+                throw new Error('Dependednt variable not provided for line graph');
             };
 
             if( opts.leftMargin ){ 
@@ -223,20 +260,22 @@
             // Define the yScale
             this.yScale = $d.scale.linear()
                 .domain([$d.max(this.dataset, function(d){
-                    return parseInt(d.temp_air)}),
+                    return parseInt(d[_this.dependentVar])}),
                     $d.min(this.dataset, function(d){
-                    return parseInt(d.temp_air)})
+                    return parseInt(d[_this.dependentVar])})
                 ])
                 .range([this.padding.top, this.height]);
 
             // Define the yAxis
             this.yAxis = $d.svg.axis()
                 .scale(this.yScale)
+                .ticks(6)
                 .orient("left");
 
             // Define the xAxis
             this.xAxis = $d.svg.axis()
                 .scale(this.xScale)
+                .ticks(6)
                 .orient("bottom");
     
             // Draw graph
@@ -253,7 +292,7 @@
                     return _this.xScale(timeHours); 
                 })
                 .y(function(d) { 
-                    return _this.yScale(parseInt(d.temp_air)); 
+                    return _this.yScale(parseInt(d[_this.dependentVar])); 
                 });
             
             // Add path of line graph
@@ -265,14 +304,14 @@
     
             // Add y axis to graph
             this.svg.append("g")
-                .attr("class", "axis")
+                .attr("class", _this.dependentVar + "_axis axis")
                 .attr("transform", "translate(" + parseInt(_this.padding.left + _this.leftMargin) + "," + _this.topMargin + ")")
                 .call(this.yAxis)
                 
             // Add x axis to graph
             this.svg.append("g")
-                .attr("class", "axis")
-                .attr("transform", "translate(" + _this.leftMargin + "," + parseInt(_this.height + _this.topMargin) + ")")
+                .attr("class", _this.dependentVar + "_axis axis")
+                .attr("transform", "translate(" + _this.leftMargin + "," + parseInt(_this.topMargin + _this.height) + ")")
                 .call(this.xAxis);
         }
     });
