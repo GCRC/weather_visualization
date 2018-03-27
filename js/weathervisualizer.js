@@ -53,7 +53,6 @@
                 this.dispatchService.register(DH, 'windowResized', f);
             };
 
-
             if( opts.widgetOptions ){ 
                 this.containerId = "#" + opts.widgetOptions.containerId;
                 this.csvFiles = opts.widgetOptions.csvFiles;
@@ -76,10 +75,8 @@
                     this._loadCSVDataset(this.csvFiles[0]);
                 }; 
             };
-            
-            //this._drawVisualization();
-            
-            $n2.log("Clyde River Weather Station Data Visualizer: ", this);
+
+            $n2.log("Weather Station Data Visualizer: ", this);
         },
 
         _getWindowWidth: function(){
@@ -120,6 +117,34 @@
             return data;
         },
 
+        _convertPressure: function(data){
+
+            // Loop through all filtered data and add converted kilopascal value
+            for( var i = 0, e = data.length; i < e; i++ ){
+
+                var row = data[i];
+                var hectopascal = row.pressure;
+                var conversionFactor = 0.1;
+
+                row.kilopascal = hectopascal * conversionFactor;
+            };
+            return data;
+        },
+
+        _convertWindSpeed: function(data){
+
+            // Loop through all filtered data and add converted km/h windspeed value
+            for( var i = 0, e = data.length; i < e; i++ ){
+
+                var row = data[i];
+                var mPerSec = row.wind_speed;
+                var conversionFactor = 3.6;
+
+                row.kmperhour_wind_speed = mPerSec * conversionFactor;
+            };
+            return data;
+        },
+
         _loadCSVDataset: function(csvFile){
             var _this = this;
 
@@ -134,6 +159,10 @@
                 });
 
                 dataset = _this._convertDates(dataset);
+
+                dataset = _this._convertPressure(dataset);
+
+                dataset = _this._convertWindSpeed(dataset);
 
                 _this._updateDataset(dataset);
             });
@@ -154,13 +183,13 @@
                     .attr('height', this.height)
                     .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
     
-            var lineGraphTopMargin = 50;
-            var lineGraphLeftMargin = 400;
+            var lineGraphTopMargin = 60;
+            var lineGraphLeftMargin = 350;
             
             var airTempGraphProperties = {
                 dataset: this.dataset,
                 dependentVar: "temp_air",
-                dependentLabel: "Air Temperature °C",
+                dependentLabel: "Air Temp °C",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
                 height: ((this.height - lineGraphTopMargin)/3),
@@ -170,7 +199,7 @@
 
             var windSpeedGraphProperties = {
                 dataset: this.dataset,
-                dependentVar: "wind_speed",
+                dependentVar: "kmperhour_wind_speed",
                 dependentLabel: "Wind Speed km/hr",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
@@ -181,7 +210,7 @@
 
             var pressureGraphProperties = {
                 dataset: this.dataset,
-                dependentVar: "pressure",
+                dependentVar: "kilopascal",
                 dependentLabel: "Pressure kPa",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
@@ -191,9 +220,18 @@
             };
     
             // Add line graphs to the svg
-            this.tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
-            this.windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
-            this.pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
+            var tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
+            var windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
+            var pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
+
+
+            var controlPanelParameters = {
+                containerId: this.containerId,
+                width: this.width
+            };
+
+            // Create a new control panel
+            var controlPanel = new WeatherDataController(controlPanelParameters);
         },
 
         _handle: function(m){
@@ -206,6 +244,60 @@
                 this._drawVisualization();
             };
         }   
+    });
+
+    var WeatherDataController = $n2.Class('WeatherDataController', {
+        containerId: null,
+        width: null,
+
+        initialize: function(opts_){
+
+            var opts = $n2.extend({
+                containerId: null,
+                width: null
+            },opts_);
+
+            if( opts.containerId ){ 
+                this.containerId = opts.containerId;
+            };
+
+            if( opts.width ){ 
+                this.width = opts.width;
+            };
+
+            if( !this.containerId ){
+                throw new Error("containerId required for control panels")
+            };
+
+            // Add Navbar to container
+            this.addDatasetNavbar();
+
+            // Add Control Panel to container
+            this.addControlPanel();
+        },
+
+        addDatasetNavbar: function(){
+
+            var svg = $d.select(this.containerId + ' svg');
+
+            var datasetNavbar = svg.append('rect')
+                .attr('id','dataset_navbar')
+                .attr('x',0)
+                .attr('y',0)
+                .attr('width', this.width)
+                .attr('height',50);
+        },
+
+        addControlPanel: function(){
+            
+            // Add control panel if it doesn't already exist
+            if( !$(this.containerId + ' #control_panel').length ){
+
+                var controlPanel = $('<div>')
+                    .attr('id', 'control_panel')
+                    .appendTo(this.containerId);
+            };
+        }
     });
 
     //--------------------------------------------------------------------------
@@ -299,9 +391,9 @@
 
             var yScale = $d.scale.linear()
                 .domain([$d.max(this.dataset, function(d){
-                    return parseInt(d[_this.dependentVar])}),
+                    return parseFloat(d[_this.dependentVar])}),
                     $d.min(this.dataset, function(d){
-                    return parseInt(d[_this.dependentVar])})
+                    return parseFloat(d[_this.dependentVar])})
                 ])
                 .range([this.padding.top, this.height]);
 
@@ -336,7 +428,7 @@
                     return _this.xScale(d.date); 
                 })
                 .y(function(d) { 
-                    return _this.yScale(parseInt(d[_this.dependentVar])); 
+                    return _this.yScale(parseFloat(d[_this.dependentVar])); 
                 });
 
             var	area = d3.svg.area()	
@@ -347,7 +439,7 @@
                      return _this.height; 
                 })	
                 .y1(function(d) { 
-                    return _this.yScale(parseInt(d[_this.dependentVar])); 
+                    return _this.yScale(parseFloat(d[_this.dependentVar])); 
                 });
 
             var lineGraph = svg.append("g")

@@ -11,6 +11,7 @@ svg {
     border-radius: 2px;
 }
 
+/* Line Graph Style Rules */
 svg path.line { 
     stroke: #0191c7;
     fill: #0191c7;
@@ -39,4 +40,20 @@ svg .axis text.axis_label {
     font-size: 14px;
     fill: white;
     text-anchor: middle;
+}
+
+/* Control Panel Style Rules */
+#control_panel {
+    position: absolute;
+    top: 75px;
+    left: 25px;
+    width: 300px;
+    height: 150px;
+    border: 1px solid #999999;
+    border-radius: 2px;
+}
+
+#dataset_navbar {
+    fill: #999999;
+    fill-opacity: 0.2;
 }
