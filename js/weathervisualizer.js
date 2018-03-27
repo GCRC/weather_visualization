@@ -339,6 +339,17 @@
                     return _this.yScale(parseInt(d[_this.dependentVar])); 
                 });
 
+            var	area = d3.svg.area()	
+                .x(function(d) { 
+                    return _this.xScale(d.date); 
+                })
+                .y0(function(d) {
+                     return _this.height; 
+                })	
+                .y1(function(d) { 
+                    return _this.yScale(parseInt(d[_this.dependentVar])); 
+                });
+
             var lineGraph = svg.append("g")
                 .attr("class", _this.dependentVar + "_graph");
             
@@ -349,6 +360,13 @@
                 .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
                 .attr("d", line);
     
+            // Add area of line graph
+            lineGraph.append("path")
+                .datum(_this.dataset)
+                .attr("class", "area")
+                .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
+                .attr("d", area);
+
             // Add y axis to graph
             var yAxis = lineGraph.append("g")
                 .attr("class", _this.dependentVar + "_axis axis")
