@@ -19,8 +19,8 @@ svg path.line {
 }
 
 svg path.area {
-    fill: #0191c7;
-    fill-opacity: 0.5;
+    /*fill: #0191c7;*/
+    /*fill-opacity: 0.5;*/
     stroke-width: 0;
 }
 

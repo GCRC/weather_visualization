@@ -346,7 +346,7 @@
             if( this.csvFiles.length > 1 ){
             
                 var leftArrow = svg.append('path')
-                    .attr('d','M5,25 25,5 25,10 12,25 25,40 25,45z')
+                    .attr('d','M5,25 25,5 25,10 15,25 25,40 25,45z')
                     .attr('id','left_navbar_btn')
                     .on('click', function(){
                         _this.dispatchService.synchronousCall(DH,{
@@ -358,7 +358,7 @@
                     .text(_loc("Previous"));
 
                 var rightArrow = svg.append('path')
-                    .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-12)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
+                    .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-15)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
                     .attr('id','right_navbar_btn')
                     .on('click', function(){
                         _this.dispatchService.synchronousCall(DH,{
@@ -515,7 +515,27 @@
             var _this = this;
             var svg = $d.select(this.containerId + ' svg');
 
-            // Initiate height of line at the x-axis
+            // Define fill gradient used by line graph
+            var defs = svg.append('defs');
+            var linearGradient = defs.append('linearGradient')
+                .attr('id','areaFillGradient')
+                .attr("x1",'0%')
+                .attr("y1",'0%')
+                .attr("x2",'0%')
+                .attr('y2','100%');
+
+            linearGradient.append('stop')
+                .attr('offset', '0%')
+                .attr('stop-opacity', 0.8)
+                .attr('stop-color', '#0191c7');
+
+            linearGradient.append('stop')
+                .attr('offset', '100%')
+                .attr('stop-opacity', 0)
+                .attr('stop-color', '#0191c7');
+            
+            // Initial height of line at the x-axis
+            // Used for transition
             var startLine = $d.svg.line()
                 .x(function(d) { 
                     return _this.xScale(d.date); 
@@ -524,7 +544,8 @@
                     return _this.height; 
                 });
 
-            // Initiate height of area at the x-axis
+            // Initial height of area at the x-axis
+            // Used for transition
             var startArea = d3.svg.area()
                 .x(function(d) { 
                     return _this.xScale(d.date); 
@@ -572,6 +593,7 @@
             lineGraph.append("path")
                 .datum(_this.dataset)
                 .attr("class", "area")
+                .attr('fill','url(#areaFillGradient)')
                 .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
                 .attr("d", startArea)
                 .transition()
