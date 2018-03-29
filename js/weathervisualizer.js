@@ -151,7 +151,7 @@
             if( (currentIndex + indexChange) >= numOFCSVFiles ){
                 this.csvFileIndex = 0;
 
-            } else if ((currentIndex + indexChange) <= 0){
+            } else if ((currentIndex + indexChange) < 0){
                 this.csvFileIndex = numOFCSVFiles - 1;
             } else {
                 this.csvFileIndex = currentIndex + indexChange;
@@ -262,6 +262,7 @@
             var controlPanelParameters = {
                 containerId: this.containerId,
                 dispatchService: this.dispatchService,
+                csvFiles: this.csvFiles,
                 width: this.width
             };
 
@@ -292,6 +293,7 @@
     var WeatherDataController = $n2.Class('WeatherDataController', {
         containerId: null,
         width: null,
+        csvFiles: null,
         dispatchService: null,
 
         initialize: function(opts_){
@@ -299,6 +301,7 @@
             var opts = $n2.extend({
                 containerId: null,
                 width: null,
+                csvFiles: null,
                 dispatchService: null,
             },opts_);
 
@@ -316,8 +319,9 @@
                 this.width = opts.width;
             };
 
-            if( !this.containerId ){
-                throw new Error("containerId required for control panels")
+
+            if( opts.csvFiles ){ 
+                this.csvFiles = opts.csvFiles;
             };
 
             // Add Navbar to container
@@ -338,31 +342,34 @@
                 .attr('width', this.width)
                 .attr('height',50);
 
-            var leftArrow = svg.append('path')
-                .attr('d','M5,25 25,5 25,10 12,25 25,40 25,45z')
-                .attr('id','left_navbar_btn')
-                .on('click', function(){
-                    _this.dispatchService.synchronousCall(DH,{
-                        type: 'prevCSVDataset'
+            // Add nav-bar controls if more than one dataset is available
+            if( this.csvFiles.length > 1 ){
+            
+                var leftArrow = svg.append('path')
+                    .attr('d','M5,25 25,5 25,10 12,25 25,40 25,45z')
+                    .attr('id','left_navbar_btn')
+                    .on('click', function(){
+                        _this.dispatchService.synchronousCall(DH,{
+                            type: 'prevCSVDataset'
+                        });
                     });
-                });
-  
-            leftArrow.append('title')
-                .text(_loc("Previous"));
+    
+                leftArrow.append('title')
+                    .text(_loc("Previous"));
 
-            var rightArrow = svg.append('path')
-                .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-12)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
-                .attr('id','right_navbar_btn')
-                .on('click', function(){
-                    _this.dispatchService.synchronousCall(DH,{
-                        type: 'nextCSVDataset'
+                var rightArrow = svg.append('path')
+                    .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-12)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
+                    .attr('id','right_navbar_btn')
+                    .on('click', function(){
+                        _this.dispatchService.synchronousCall(DH,{
+                            type: 'nextCSVDataset'
+                        });
+
                     });
-
-                });
-  
-            rightArrow.append('title')
-                .text(_loc("Next"));
-
+    
+                rightArrow.append('title')
+                    .text(_loc("Next"));
+            };
         },
 
         _addControlPanel: function(){
@@ -507,7 +514,28 @@
         _drawLineGraph: function(){
             var _this = this;
             var svg = $d.select(this.containerId + ' svg');
-    
+
+            // Initiate height of line at the x-axis
+            var startLine = $d.svg.line()
+                .x(function(d) { 
+                    return _this.xScale(d.date); 
+                })
+                .y(function(d) { 
+                    return _this.height; 
+                });
+
+            // Initiate height of area at the x-axis
+            var startArea = d3.svg.area()
+                .x(function(d) { 
+                    return _this.xScale(d.date); 
+                })
+                .y0(function(d) {
+                    return _this.height; 
+                })	
+                .y1(function(d) { 
+                    return _this.height;
+                });
+
             var line = $d.svg.line()
                 .x(function(d) { 
                     return _this.xScale(d.date); 
@@ -535,14 +563,20 @@
                 .datum(_this.dataset)
                 .attr("class", "line")
                 .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
-                .attr("d", line);
+                .attr("d", startLine)
+                .transition()
+                    .duration(1000)
+                    .attr("d", line);
     
             // Add area of line graph
             lineGraph.append("path")
                 .datum(_this.dataset)
                 .attr("class", "area")
                 .attr("transform", "translate(" + _this.leftMargin + "," + _this.topMargin + ")")
-                .attr("d", area);
+                .attr("d", startArea)
+                .transition()
+                    .duration(1000)
+                    .attr("d", area);
 
             // Add y axis to graph
             var yAxis = lineGraph.append("g")
