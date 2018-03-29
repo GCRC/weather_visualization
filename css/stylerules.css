@@ -57,3 +57,21 @@ svg .axis text.axis_label {
     fill: #999999;
     fill-opacity: 0.2;
 }
+
+#left_navbar_btn,
+#right_navbar_btn {
+    fill: #b3b3b3;
+    fill-opacity: 0.3;
+    stroke: #cccccc;
+    stroke-width: 1;
+    stroke-opacity: 0.3;
+}
+
+#left_navbar_btn:hover,
+#right_navbar_btn:hover {
+    fill: #b3b3b3;
+    fill-opacity: 0.5;
+    stroke: #cccccc;
+    stroke-width: 1;
+    stroke-opacity: 0.5;
+}

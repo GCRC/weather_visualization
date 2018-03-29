@@ -21,6 +21,7 @@
         containerId: null,
         dataset: null,
         csvFiles: null,
+        csvFileIndex: 0,
         dispatchService: null,
         width: null,
         height: null,
@@ -51,6 +52,8 @@
                 };
     
                 this.dispatchService.register(DH, 'windowResized', f);
+                this.dispatchService.register(DH, 'nextCSVDataset', f);
+                this.dispatchService.register(DH, 'prevCSVDataset', f);
             };
 
             if( opts.widgetOptions ){ 
@@ -72,7 +75,7 @@
             } else {
                 if( !this.dataset ){
                     // initiate visualization dataset with first supplied csv file
-                    this._loadCSVDataset(this.csvFiles[0]);
+                    this._loadCSVDataset(this.csvFiles[this.csvFileIndex]);
                 }; 
             };
 
@@ -95,13 +98,7 @@
             this.height = $containerHeight - svgPadding;
         },
 
-        _updateDataset: function(data){
-            this.dataset = data;
-            this._drawVisualization();
-        },
-
         _convertDates: function(data){
-
             // Loop through all filtered data and add date objects based on temporal coloumn data
             for( var i = 0, e = data.length; i < e; i++ ){
 
@@ -118,7 +115,6 @@
         },
 
         _convertPressure: function(data){
-
             // Loop through all filtered data and add converted kilopascal value
             for( var i = 0, e = data.length; i < e; i++ ){
 
@@ -132,7 +128,6 @@
         },
 
         _convertWindSpeed: function(data){
-
             // Loop through all filtered data and add converted km/h windspeed value
             for( var i = 0, e = data.length; i < e; i++ ){
 
@@ -143,6 +138,43 @@
                 row.kmperhour_wind_speed = mPerSec * conversionFactor;
             };
             return data;
+        },
+
+        _getCSVFileIndex: function(){
+            return this.csvFileIndex;
+        },
+
+        _setCSVFileIndex: function(indexChange){
+            var numOFCSVFiles = this.csvFiles.length;
+            var currentIndex = this._getCSVFileIndex();
+
+            if( (currentIndex + indexChange) >= numOFCSVFiles ){
+                this.csvFileIndex = 0;
+
+            } else if ((currentIndex + indexChange) <= 0){
+                this.csvFileIndex = numOFCSVFiles - 1;
+            } else {
+                this.csvFileIndex = currentIndex + indexChange;
+            };
+        },
+
+        _nextDataset: function(){
+            this._setCSVFileIndex(1);
+            var fileName = this.csvFiles[this._getCSVFileIndex()];
+
+            this._loadCSVDataset(fileName);
+        },
+
+        _prevDataset: function(){
+            this._setCSVFileIndex(-1);
+            var fileName = this.csvFiles[this._getCSVFileIndex()];
+
+            this._loadCSVDataset(fileName);
+        },
+
+        _updateDataset: function(data){
+            this.dataset = data;
+            this._drawVisualization();
         },
 
         _loadCSVDataset: function(csvFile){
@@ -158,10 +190,9 @@
                     };
                 });
 
+                // Convert dates, pressure and wind speed. 
                 dataset = _this._convertDates(dataset);
-
                 dataset = _this._convertPressure(dataset);
-
                 dataset = _this._convertWindSpeed(dataset);
 
                 _this._updateDataset(dataset);
@@ -184,9 +215,10 @@
                     .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
     
             var lineGraphTopMargin = 60;
-            var lineGraphLeftMargin = 350;
+            var lineGraphLeftMargin = 380;
             
             var airTempGraphProperties = {
+                containerId: this.containerId,
                 dataset: this.dataset,
                 dependentVar: "temp_air",
                 dependentLabel: "Air Temp °C",
@@ -198,6 +230,7 @@
             };
 
             var windSpeedGraphProperties = {
+                containerId: this.containerId,
                 dataset: this.dataset,
                 dependentVar: "kmperhour_wind_speed",
                 dependentLabel: "Wind Speed km/hr",
@@ -209,6 +242,7 @@
             };
 
             var pressureGraphProperties = {
+                containerId: this.containerId,
                 dataset: this.dataset,
                 dependentVar: "kilopascal",
                 dependentLabel: "Pressure kPa",
@@ -227,6 +261,7 @@
 
             var controlPanelParameters = {
                 containerId: this.containerId,
+                dispatchService: this.dispatchService,
                 width: this.width
             };
 
@@ -242,6 +277,14 @@
 
                 // Re-draw visualization
                 this._drawVisualization();
+
+            } else if( 'nextCSVDataset' === m.type ){
+                // Update dataset with next one
+                this._nextDataset();
+
+            } else if( 'prevCSVDataset' === m.type ){
+                // Update dataset with prev one
+                this._prevDataset();
             };
         }   
     });
@@ -249,13 +292,21 @@
     var WeatherDataController = $n2.Class('WeatherDataController', {
         containerId: null,
         width: null,
+        dispatchService: null,
 
         initialize: function(opts_){
 
             var opts = $n2.extend({
                 containerId: null,
-                width: null
+                width: null,
+                dispatchService: null,
             },opts_);
+
+            if( opts.dispatchService ){
+                this.dispatchService = opts.dispatchService;
+            } else {
+                throw new Error('dispatchService not defined in line graph');
+            };
 
             if( opts.containerId ){ 
                 this.containerId = opts.containerId;
@@ -270,14 +321,14 @@
             };
 
             // Add Navbar to container
-            this.addDatasetNavbar();
+            this._addDatasetNavbar();
 
             // Add Control Panel to container
-            this.addControlPanel();
+            this._addControlPanel();
         },
 
-        addDatasetNavbar: function(){
-
+        _addDatasetNavbar: function(){
+            var _this = this;
             var svg = $d.select(this.containerId + ' svg');
 
             var datasetNavbar = svg.append('rect')
@@ -286,9 +337,35 @@
                 .attr('y',0)
                 .attr('width', this.width)
                 .attr('height',50);
+
+            var leftArrow = svg.append('path')
+                .attr('d','M5,25 25,5 25,10 12,25 25,40 25,45z')
+                .attr('id','left_navbar_btn')
+                .on('click', function(){
+                    _this.dispatchService.synchronousCall(DH,{
+                        type: 'prevCSVDataset'
+                    });
+                });
+  
+            leftArrow.append('title')
+                .text(_loc("Previous"));
+
+            var rightArrow = svg.append('path')
+                .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-12)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
+                .attr('id','right_navbar_btn')
+                .on('click', function(){
+                    _this.dispatchService.synchronousCall(DH,{
+                        type: 'nextCSVDataset'
+                    });
+
+                });
+  
+            rightArrow.append('title')
+                .text(_loc("Next"));
+
         },
 
-        addControlPanel: function(){
+        _addControlPanel: function(){
             
             // Add control panel if it doesn't already exist
             if( !$(this.containerId + ' #control_panel').length ){
@@ -304,11 +381,12 @@
     var WeatherDataVisualizerLineGraph = $n2.Class('WeatherDataVisualizerLineGraph', {
 
         dataset: null,
+        containerId: null,
         dependentVar: null,
         dependentLabel: null,
         leftMargin: null,
         topMargin: null,
-        padding: {top: 0, right: 0, bottom: 100, left: 60},
+        padding: {top: 0, right: 10, bottom: 100, left: 0},
         height: null,
         width: null,
         xScale: null,
@@ -320,10 +398,11 @@
         initialize: function(opts_){
     
             var opts = $n2.extend({
-                dataset: null
-                ,leftMargin: null
-                ,topMargin: null
-                ,dispatchService: null
+                dataset: null,
+                containerId: null,
+                leftMargin: null,
+                topMargin: null,
+                dispatchService: null
             },opts_);
             
             var _this = this;            
@@ -334,6 +413,12 @@
                 this.dispatchService = opts.dispatchService;
             } else {
                 throw new Error('dispatchService not defined in line graph');
+            };
+
+            if( opts.containerId ){ 
+                this.containerId = opts.containerId;
+            } else {
+                throw new Error('ContainerId not provided for line graph');
             };
 
             if( opts.dataset ){ 
@@ -421,7 +506,7 @@
 
         _drawLineGraph: function(){
             var _this = this;
-            var svg = $d.select('#content svg');
+            var svg = $d.select(this.containerId + ' svg');
     
             var line = $d.svg.line()
                 .x(function(d) { 
