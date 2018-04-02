@@ -53,13 +53,20 @@ svg .axis text.axis_label {
     border-radius: 2px;
 }
 
-#dataset_navbar {
+#navbar {
     fill: #999999;
     fill-opacity: 0.2;
 }
 
-#left_navbar_btn,
-#right_navbar_btn {
+#navbar_title {
+    text-anchor: middle;
+    fill: #dddddd;
+    font-family: arial;
+    font-size: 2em;
+}
+
+#navbar_left_btn,
+#navbar_right_btn {
     fill: #b3b3b3;
     fill-opacity: 0.3;
     stroke: #cccccc;
@@ -67,8 +74,8 @@ svg .axis text.axis_label {
     stroke-opacity: 0.3;
 }
 
-#left_navbar_btn:hover,
-#right_navbar_btn:hover {
+#navbar_left_btn:hover,
+#navbar_right_btn:hover {
     fill: #b3b3b3;
     fill-opacity: 0.5;
     stroke: #cccccc;

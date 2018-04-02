@@ -263,6 +263,7 @@
                 containerId: this.containerId,
                 dispatchService: this.dispatchService,
                 csvFiles: this.csvFiles,
+                csvFileIndex: this.csvFileIndex,
                 width: this.width
             };
 
@@ -294,6 +295,7 @@
         containerId: null,
         width: null,
         csvFiles: null,
+        csvFileIndex: 0,
         dispatchService: null,
 
         initialize: function(opts_){
@@ -302,6 +304,7 @@
                 containerId: null,
                 width: null,
                 csvFiles: null,
+                csvFileIndex: null,
                 dispatchService: null,
             },opts_);
 
@@ -319,9 +322,12 @@
                 this.width = opts.width;
             };
 
-
             if( opts.csvFiles ){ 
                 this.csvFiles = opts.csvFiles;
+            };
+
+            if( opts.csvFileIndex ){ 
+                this.csvFileIndex = opts.csvFileIndex;
             };
 
             // Add Navbar to container
@@ -336,18 +342,24 @@
             var svg = $d.select(this.containerId + ' svg');
 
             var datasetNavbar = svg.append('rect')
-                .attr('id','dataset_navbar')
+                .attr('id','navbar')
                 .attr('x',0)
                 .attr('y',0)
                 .attr('width', this.width)
                 .attr('height',50);
+
+            var navBarTitle = svg.append('text')
+                .attr('id', 'navbar_title')
+                .attr('x', this.width/2)
+                .attr('y', 35)
+                .text("Station Data: " + this.csvFiles[this.csvFileIndex]);
 
             // Add nav-bar controls if more than one dataset is available
             if( this.csvFiles.length > 1 ){
             
                 var leftArrow = svg.append('path')
                     .attr('d','M5,25 25,5 25,10 15,25 25,40 25,45z')
-                    .attr('id','left_navbar_btn')
+                    .attr('id','navbar_left_btn')
                     .on('click', function(){
                         _this.dispatchService.synchronousCall(DH,{
                             type: 'prevCSVDataset'
@@ -359,7 +371,7 @@
 
                 var rightArrow = svg.append('path')
                     .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-15)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
-                    .attr('id','right_navbar_btn')
+                    .attr('id','navbar_right_btn')
                     .on('click', function(){
                         _this.dispatchService.synchronousCall(DH,{
                             type: 'nextCSVDataset'
