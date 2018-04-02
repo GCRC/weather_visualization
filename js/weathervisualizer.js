@@ -333,6 +333,9 @@
             // Add Navbar to container
             this._addDatasetNavbar();
 
+            // Add display for averages
+            this._addAvgDisplay();
+
             // Add Control Panel to container
             this._addControlPanel();
         },
@@ -384,14 +387,97 @@
             };
         },
 
+        _addAvgDisplay: function(){
+            var _this = this;
+            var svg = $d.select(this.containerId + ' svg');
+
+            var avgDisplay = svg.append('rect')
+                .attr('id','avg_display')
+                .attr('x',15)
+                .attr('y',235)
+                .attr('width', 300)
+                .attr('height',170);
+
+            svg.append('text')
+                .attr('class', 'avg_display_label')
+                .attr('x', 30)
+                .attr('y', 270)
+                .text(_loc('Avg Air Temp: '));
+
+            svg.append('text')
+                .attr('class', 'avg_display_label')
+                .attr('x', 30)
+                .attr('y', 325)
+                .text(_loc('Avg Wind Speed: '));
+
+            svg.append('text')
+                .attr('class', 'avg_display_label')
+                .attr('x', 30)
+                .attr('y', 380)
+                .text(_loc('Avg Pressure: '));
+        },
+
         _addControlPanel: function(){
             
             // Add control panel if it doesn't already exist
             if( !$(this.containerId + ' #control_panel').length ){
+                var _this = this;
 
                 var controlPanel = $('<div>')
                     .attr('id', 'control_panel')
                     .appendTo(this.containerId);
+                
+                var controlPanelLabel = $('<span>')
+                    .attr('id', 'control_panel_heading')
+                    .text(_loc('Date Range'))
+                    .appendTo(controlPanel);
+
+                var slideRange = $('<div>')
+                    .attr('id', 'slide-range')
+                    .appendTo(controlPanel);
+
+                slideRange.slider({
+                    range: true,
+                    min: 0,
+                    max: 1000,
+                    values:[0, 1000],
+                    slide: function( event, ui ){
+                        dateMinValue.val(ui.values[0]);
+                        dateMaxValue.val(ui.values[1]);
+                    }
+                });
+
+                var dateMin = $('<div>')
+                    .attr('id','date_min')
+                    .appendTo(controlPanel);
+                
+                $('<label>')
+                    .attr('class', 'range_label')
+                    .attr('for', 'minDateValue')
+                    .text('Start Date:')
+                    .appendTo(dateMin);
+                
+                var dateMinValue = $('<input>')
+                    .attr('id', 'minDateValue')
+                    .attr('readonly', true)
+                    .val(0)
+                    .appendTo(dateMin);
+                
+                var dateMax = $('<div>')
+                    .attr('id','date_max')
+                    .appendTo(controlPanel);
+
+                $('<label>')
+                    .attr('class', 'range_label')
+                    .attr('for', 'maxDateValue')
+                    .text('End Date:')
+                    .appendTo(dateMax);
+
+                var dateMaxValue = $('<input>')
+                    .attr('id', 'maxDateValue')
+                    .attr('readonly', true)
+                    .val(1000)
+                    .appendTo(dateMax);
             };
         }
     });
@@ -484,7 +570,11 @@
 
         _defineXScale: function(){
             var xScale = $d.time.scale()
-                .domain([ this.dataset[0].date, this.dataset[this.dataset.length - 1].date])
+                .domain([ $d.min(this.dataset, function(d){
+                    return d.date.valueOf()}), 
+                    $d.max(this.dataset, function(d){
+                    return d.date.valueOf()})
+                    ])
                 .range([this.padding.left, this.width]);
 
             return xScale;

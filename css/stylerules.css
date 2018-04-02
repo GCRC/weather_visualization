@@ -49,10 +49,33 @@ svg .axis text.axis_label {
     left: 25px;
     width: 300px;
     height: 150px;
-    border: 1px solid #999999;
+    border: 1px solid #919191;
     border-radius: 2px;
 }
+#slide-range {
+    width: 270px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+#date_min, 
+#date_max {
+    margin: 5px;
+}
+#control_panel_heading {
+    color: #ffffff;
+    margin: 5px 5px;
+    display: block;
+    font-size: 1.2em;
+    font-weight: bold;
+    font-family: arial;
+}
+.range_label {
+    color: #ffffff;
+}
 
+/* Nav-bar control styling */
 #navbar {
     fill: #999999;
     fill-opacity: 0.2;
@@ -81,4 +104,18 @@ svg .axis text.axis_label {
     stroke: #cccccc;
     stroke-width: 1;
     stroke-opacity: 0.5;
+}
+
+#avg_display {
+    stroke: #ffffff;
+    fill: #333333;
+    fill-opacity: 0.2;
+}
+
+.avg_display_label {
+    text-anchor: start;
+    fill: #ffffff;
+    font-family: arial;
+    font-size: 1.6em;
+    font-weight: bold;
 }
