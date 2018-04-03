@@ -712,7 +712,7 @@
             var xAxis = $d.svg.axis()
                 .scale(this.xScale)
                 .ticks(6)
-                .tickFormat(d3.time.format("%y/%m/%d"))
+                .tickFormat(d3.time.format("%d/%m/%y"))
                 .orient("bottom");
             
             return xAxis;
@@ -838,7 +838,7 @@
 
             // Added xAxis label
             xAxis.append("text")
-                .text("Date (YY/MM/DD)")
+                .text("Date (DD/MM/YY)")
                 .attr("class","axis_label")
                 .attr("x",_this.width/2)
                 .attr("y",40);

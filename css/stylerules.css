@@ -19,26 +19,24 @@ svg path.line {
 }
 
 svg path.area {
-    /*fill: #0191c7;*/
-    /*fill-opacity: 0.5;*/
     stroke-width: 0;
 }
 
 svg .axis path,
 svg .axis line {
     fill: none;
-    stroke: white;
+    stroke: #ffffff;
 }
 
 svg .axis text {
     font-size: 10px; 
     font-family: sans-serif;
-    stroke: white;
+    stroke: #ffffff;
 }
 
 svg .axis text.axis_label {
     font-size: 14px;
-    fill: white;
+    fill: #ffffff;
     text-anchor: middle;
 }
 
@@ -58,14 +56,18 @@ svg .axis text.axis_label {
     margin-right: auto;
     margin-top: 15px;
     margin-bottom: 10px;
+    background-color: #999999;
 }
 .ui-slider-range.ui-widget-header {
     background-color: #0191c7;
 }
+.ui-slider .ui-slider-handle {
+    border-radius: 2px;
+}
 #date_min, 
 #date_max {
     margin: 20px 10px 0px 10px;
-    border-bottom: 1px dashed #999;
+    border-bottom: 1px dashed #999999;
     
 }
 #date_min input,
