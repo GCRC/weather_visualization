@@ -26,6 +26,7 @@
         width: null,
         height: null,
         svgPadding: 10,
+        timeRange: {},
         
         initialize: function(opts_){
     
@@ -38,14 +39,10 @@
             
             var _this = this;
 
-            if (opts.config) {
-                if (opts.config.directory) {
-                    this.dispatchService = opts.config.directory.dispatchService;
-                };
-            };
+            if( opts.config && opts.config.directory && opts.config.directory.dispatchService){
 
-            if (this.dispatchService) {
-             
+                this.dispatchService = opts.config.directory.dispatchService;
+
                 // Register with dispatch service
                 var f = function(m, addr, dispatcher){
                     _this._handle(m, addr, dispatcher);
@@ -54,29 +51,36 @@
                 this.dispatchService.register(DH, 'windowResized', f);
                 this.dispatchService.register(DH, 'nextCSVDataset', f);
                 this.dispatchService.register(DH, 'prevCSVDataset', f);
+                this.dispatchService.register(DH, 'updateTimeRange', f);  
+            } else {
+                throw new Error('dispatchService must be specified');
             };
+
 
             if( opts.widgetOptions ){ 
-                this.containerId = "#" + opts.widgetOptions.containerId;
-                this.csvFiles = opts.widgetOptions.csvFiles;
-            };
-            
-            if( this.containerId ){
-                // if containerId defined, than calculate svg width and height values
-                this._getWindowHeight();
-                this._getWindowWidth();
-            }
-            else {
-                throw new Error('containerId must be specified');
-            }; 
 
-            if( !this.csvFiles ){
-                throw new Error('weather station CSV data not specified')
-            } else {
-                if( !this.dataset ){
+                if ( opts.widgetOptions.containerId ){
+                    this.containerId = "#" + opts.widgetOptions.containerId;
+
+                    // if containerId is defined, than calculate svg width and height values
+                    this._getWindowHeight();
+                    this._getWindowWidth();
+
+                } else {
+                    throw new Error('containerId must be specified in widget options');
+                };
+                
+                if( opts.widgetOptions.csvFiles ){
+                    this.csvFiles = opts.widgetOptions.csvFiles;
+
                     // initiate visualization dataset with first supplied csv file
-                    this._loadCSVDataset(this.csvFiles[this.csvFileIndex]);
-                }; 
+                    if( !this.dataset ){                        
+                        this._loadCSVDataset(this.csvFiles[this.csvFileIndex]);
+                    };
+
+                } else {
+                    throw new Error('weather station CSV data not specified')
+                };
             };
 
             $n2.log("Weather Station Data Visualizer: ", this);
@@ -108,7 +112,7 @@
                 var day = row.day;
                 var hour = row.hour;
 
-                // Add new date property to row containing new date object
+                // Add date property to row containing a new date object
                 row.date = new Date(year, month, day, hour);
             };
             return data;
@@ -159,6 +163,8 @@
         },
 
         _nextDataset: function(){
+            // Reset time range
+            this.timeRange = {};
             this._setCSVFileIndex(1);
             var fileName = this.csvFiles[this._getCSVFileIndex()];
 
@@ -166,14 +172,81 @@
         },
 
         _prevDataset: function(){
+            // Reset time range
+            this.timeRange = {};
+
             this._setCSVFileIndex(-1);
             var fileName = this.csvFiles[this._getCSVFileIndex()];
 
             this._loadCSVDataset(fileName);
         },
 
-        _updateDataset: function(data){
-            this.dataset = data;
+        // _filterDateRange: function(dataset, timeRange){
+
+        //     var dateValue = dataset.date.valueOf();
+
+        //     if( dateValue >= this.timeRange.startTime && dateValue <= this.timeRange.endTime ){
+        //         return true;
+        //     } else {
+        //         return false;
+        //     };
+        // },
+
+        _calcInitialTimeRange: function(dataset){
+            var timeRange = {};
+
+            // Loop through all filtered data and identify start and end time range
+            for( var i = 0, e = dataset.length; i < e; i++ ){
+
+                var row = dataset[i];
+                var dateValue = row.date.valueOf();
+
+                if (timeRange.hasOwnProperty('startTime')){
+                    if ( timeRange.startTime > dateValue ){
+                        timeRange.startTime = dateValue;
+                        timeRange.minTime = dateValue;
+                    };
+
+                } else {
+                    timeRange.startTime = dateValue;
+                    timeRange.minTime = dateValue;
+                };
+
+                if (timeRange.hasOwnProperty('endTime')){
+                    if ( timeRange.endTime < dateValue ){
+                        timeRange.endTime = dateValue;
+                        timeRange.maxTime = dateValue;
+                    };
+
+                } else {
+                    timeRange.endTime = dateValue;
+                    timeRange.maxTime = dateValue;
+                };
+
+            };
+            this._updateTimeRange(timeRange);
+        },
+
+        _updateTimeRange: function(timeRange){
+            if(timeRange.minTime){
+                this.timeRange.minTime = timeRange.minTime;
+            };
+
+            if(timeRange.maxTime){
+                this.timeRange.maxTime = timeRange.maxTime;
+            };
+
+            if(timeRange.startTime){
+                this.timeRange.startTime = timeRange.startTime;
+            };
+
+            if(timeRange.endTime){
+                this.timeRange.endTime = timeRange.endTime;
+            };
+        },
+
+        _updateDataset: function(dataset){
+            this.dataset = dataset;
             this._drawVisualization();
         },
 
@@ -184,8 +257,8 @@
 
                 // filter out all rows with null air temperture, wind speed and barometric pressure values from the dataset
                 var dataset = d.filter(function(d) {
-                    var nullValue = "-9999";
-                    if( d.temp_air !== nullValue && d.pressure !== nullValue && d.wind_speed !== nullValue ){
+                    var noDataValue = "-9999";
+                    if( d.temp_air !== noDataValue && d.pressure !== noDataValue && d.wind_speed !== noDataValue ){
                         return d;
                     };
                 });
@@ -194,6 +267,9 @@
                 dataset = _this._convertDates(dataset);
                 dataset = _this._convertPressure(dataset);
                 dataset = _this._convertWindSpeed(dataset);
+
+                // Calculate the initial time range of the entire dataset if timeRange not defined
+                _this._calcInitialTimeRange(dataset);
 
                 _this._updateDataset(dataset);
             });
@@ -264,6 +340,7 @@
                 dispatchService: this.dispatchService,
                 csvFiles: this.csvFiles,
                 csvFileIndex: this.csvFileIndex,
+                timeRange: this.timeRange,
                 width: this.width
             };
 
@@ -287,6 +364,13 @@
             } else if( 'prevCSVDataset' === m.type ){
                 // Update dataset with prev one
                 this._prevDataset();
+
+            } else if( 'updateTimeRange' === m.type ){
+                var newTimeRange = {
+                    startTime: m.startTime,
+                    endTime: m.endTime
+                };
+                this._updateTimeRange(newTimeRange);
             };
         }   
     });
@@ -296,6 +380,7 @@
         width: null,
         csvFiles: null,
         csvFileIndex: 0,
+        timeRange: null,
         dispatchService: null,
 
         initialize: function(opts_){
@@ -305,6 +390,7 @@
                 width: null,
                 csvFiles: null,
                 csvFileIndex: null,
+                timeRange: null,
                 dispatchService: null,
             },opts_);
 
@@ -328,6 +414,10 @@
 
             if( opts.csvFileIndex ){ 
                 this.csvFileIndex = opts.csvFileIndex;
+            };
+
+            if( opts.timeRange ){ 
+                this.timeRange = opts.timeRange;
             };
 
             // Add Navbar to container
@@ -379,7 +469,6 @@
                         _this.dispatchService.synchronousCall(DH,{
                             type: 'nextCSVDataset'
                         });
-
                     });
     
                 rightArrow.append('title')
@@ -417,68 +506,73 @@
                 .text(_loc('Avg Pressure: '));
         },
 
-        _addControlPanel: function(){
+        _addControlPanel: function(){          
+
+            // Remove control panel if it already exists
+            if( $(this.containerId + ' #control_panel').length ) $(this.containerId + ' #control_panel').remove();
             
-            // Add control panel if it doesn't already exist
-            if( !$(this.containerId + ' #control_panel').length ){
-                var _this = this;
+            var _this = this;
 
-                var controlPanel = $('<div>')
-                    .attr('id', 'control_panel')
-                    .appendTo(this.containerId);
-                
-                var controlPanelLabel = $('<span>')
-                    .attr('id', 'control_panel_heading')
-                    .text(_loc('Date Range'))
-                    .appendTo(controlPanel);
+            var controlPanel = $('<div>')
+                .attr('id', 'control_panel')
+                .appendTo(this.containerId);
+            
+            var controlPanelLabel = $('<span>')
+                .attr('id', 'control_panel_heading')
+                .text(_loc('Date Range'))
+                .appendTo(controlPanel);
 
-                var slideRange = $('<div>')
-                    .attr('id', 'slide-range')
-                    .appendTo(controlPanel);
+            var slideRange = $('<div>')
+                .attr('id', 'slide-range')
+                .appendTo(controlPanel);
 
-                slideRange.slider({
-                    range: true,
-                    min: 0,
-                    max: 1000,
-                    values:[0, 1000],
-                    slide: function( event, ui ){
-                        dateMinValue.val(ui.values[0]);
-                        dateMaxValue.val(ui.values[1]);
-                    }
-                });
+            slideRange.slider({
+                range: true,
+                min: this.timeRange.minTime,
+                max: this.timeRange.maxTime,
+                values:[this.timeRange.startTime, this.timeRange.endTime],
+                slide: function( event, ui ){
+                    dateMinValue.val(new Date(ui.values[0]).toLocaleString('en-GB'));
+                    dateMaxValue.val(new Date(ui.values[1]).toLocaleString('en-GB'));
+                    _this.dispatchService.synchronousCall(DH,{
+                        type: 'updateTimeRange',
+                        startTime: ui.values[0],
+                        endTime: ui.values[1]
+                    });
+                }
+            });
 
-                var dateMin = $('<div>')
-                    .attr('id','date_min')
-                    .appendTo(controlPanel);
-                
-                $('<label>')
-                    .attr('class', 'range_label')
-                    .attr('for', 'minDateValue')
-                    .text('Start Date:')
-                    .appendTo(dateMin);
-                
-                var dateMinValue = $('<input>')
-                    .attr('id', 'minDateValue')
-                    .attr('readonly', true)
-                    .val(0)
-                    .appendTo(dateMin);
-                
-                var dateMax = $('<div>')
-                    .attr('id','date_max')
-                    .appendTo(controlPanel);
+            var dateMin = $('<div>')
+                .attr('id','date_min')
+                .appendTo(controlPanel);
+            
+            $('<label>')
+                .attr('class', 'range_label')
+                .attr('for', 'minDateValue')
+                .text(_loc('Start Date:'))
+                .appendTo(dateMin);
+            
+            var dateMinValue = $('<input>')
+                .attr('id', 'minDateValue')
+                .attr('readonly', true)
+                .val(new Date(this.timeRange.startTime).toLocaleString('en-GB'))
+                .appendTo(dateMin);
+            
+            var dateMax = $('<div>')
+                .attr('id','date_max')
+                .appendTo(controlPanel);
 
-                $('<label>')
-                    .attr('class', 'range_label')
-                    .attr('for', 'maxDateValue')
-                    .text('End Date:')
-                    .appendTo(dateMax);
+            $('<label>')
+                .attr('class', 'range_label')
+                .attr('for', 'maxDateValue')
+                .text(_loc('End Date:'))
+                .appendTo(dateMax);
 
-                var dateMaxValue = $('<input>')
-                    .attr('id', 'maxDateValue')
-                    .attr('readonly', true)
-                    .val(1000)
-                    .appendTo(dateMax);
-            };
+            var dateMaxValue = $('<input>')
+                .attr('id', 'maxDateValue')
+                .attr('readonly', true)
+                .val(new Date(this.timeRange.endTime).toLocaleString('en-GB'))
+                .appendTo(dateMax);
         }
     });
 
