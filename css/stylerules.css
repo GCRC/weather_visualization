@@ -1,5 +1,6 @@
 #content {
     background-color: #222222 !important;
+    overflow: auto;
 }
 
 .n2_content_text {
@@ -9,6 +10,8 @@
 svg {
     border: 1px solid #555555;
     border-radius: 2px;
+    min-height: 425px;
+    min-width: 825px;
 }
 
 /* Line Graph Style Rules */

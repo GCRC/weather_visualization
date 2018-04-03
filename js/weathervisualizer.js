@@ -25,6 +25,8 @@
         dispatchService: null,
         width: null,
         height: null,
+        minSVGHeight: 425,
+        minSVGWidth: 825,
         svgPadding: 10,
         
         initialize: function(opts_){
@@ -89,7 +91,12 @@
             var $containerWidth = $(this.containerId).width();
             var svgPadding = this.svgPadding * 2;
 
-            this.width = $containerWidth - svgPadding;
+            if ( ($containerWidth - svgPadding) < this.minSVGWidth ){
+                this.width = this.minSVGWidth;
+            } else {
+                this.width = $containerWidth - svgPadding;
+            };
+            
         },
 
         _getWindowHeight: function(){
@@ -97,7 +104,12 @@
             var $containerHeight = $(this.containerId).height();
             var svgPadding = this.svgPadding * 2;
 
-            this.height = $containerHeight - svgPadding;
+            if ( ($containerHeight - svgPadding) < this.minSVGHeight ){
+                this.height = this.minSVGHeight;
+            } else {
+                this.height = $containerHeight - svgPadding;
+            };
+            
         },
 
         _convertDates: function(dataset){
@@ -338,8 +350,10 @@
                     .attr('height', this.height)
                     .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
     
-            var lineGraphTopMargin = 60;
-            var lineGraphLeftMargin = 380;
+            var navBarHeight = 50;
+            var lineGraphTopMargin = 20;
+            var previousLineGraphBottomPadding = 45;
+            var lineGraphLeftMargin = 385;
             
             var airTempGraphProperties = {
                 containerId: this.containerId,
@@ -348,9 +362,9 @@
                 dependentLabel: "Air Temp °C",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
-                height: ((this.height - lineGraphTopMargin)/3),
+                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
                 leftMargin: lineGraphLeftMargin,
-                topMargin: lineGraphTopMargin
+                topMargin: navBarHeight + lineGraphTopMargin
             };
 
             var windSpeedGraphProperties = {
@@ -360,9 +374,9 @@
                 dependentLabel: "Wind Speed km/hr",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
-                height: ((this.height - lineGraphTopMargin)/3),
+                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
                 leftMargin: lineGraphLeftMargin,
-                topMargin: lineGraphTopMargin + this.height/3
+                topMargin: lineGraphTopMargin + ((this.height - navBarHeight)/3) + previousLineGraphBottomPadding
             };
 
             var pressureGraphProperties = {
@@ -372,9 +386,9 @@
                 dependentLabel: "Pressure kPa",
                 dispatchService: this.dispatchService,
                 width: this.width - lineGraphLeftMargin,
-                height: ((this.height - lineGraphTopMargin)/3),
+                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
                 leftMargin: lineGraphLeftMargin,
-                topMargin: lineGraphTopMargin + ((this.height/3)*2)
+                topMargin: lineGraphTopMargin + (((this.height - navBarHeight)/3)*2) + previousLineGraphBottomPadding
             };
     
             // Add line graphs to the svg
@@ -389,7 +403,8 @@
                 csvFiles: this.csvFiles,
                 csvFileIndex: this.csvFileIndex,
                 datasetStatistics: this.dataset.statistics,
-                width: this.width
+                width: this.width,
+                navBarHeight: navBarHeight
             };
 
             // Create a new control panel
@@ -431,6 +446,7 @@
         csvFileIndex: 0,
         datasetStatistics: null,
         dispatchService: null,
+        navBarHeight: null,
 
         initialize: function(opts_){
 
@@ -441,6 +457,7 @@
                 csvFileIndex: null,
                 datasetStatistics: null,
                 dispatchService: null,
+                navBarHeight: null,
             },opts_);
 
             if( opts.dispatchService ){
@@ -455,6 +472,10 @@
 
             if( opts.width ){ 
                 this.width = opts.width;
+            };
+
+            if( opts.navBarHeight ){ 
+                this.navBarHeight = opts.navBarHeight;
             };
 
             if( opts.csvFiles ){ 
@@ -488,7 +509,7 @@
                 .attr('x',0)
                 .attr('y',0)
                 .attr('width', this.width)
-                .attr('height',50);
+                .attr('height',this.navBarHeight);
 
             var navBarTitle = svg.append('text')
                 .attr('id', 'navbar_title')
@@ -657,7 +678,7 @@
         dependentLabel: null,
         leftMargin: null,
         topMargin: null,
-        padding: {top: 0, right: 10, bottom: 100, left: 0},
+        padding: {top: 0, right: 10, bottom: 45, left: 0},
         height: null,
         width: null,
         xScale: null,
