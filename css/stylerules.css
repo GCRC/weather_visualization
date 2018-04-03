@@ -124,16 +124,23 @@ svg .axis text.axis_label {
     stroke-opacity: 0.5;
 }
 
+/* Average Display Styling */
 #avg_display {
     stroke: #ffffff;
     fill: #333333;
     fill-opacity: 0.2;
 }
-
 .avg_display_label {
     text-anchor: start;
     fill: #ffffff;
     font-family: arial;
-    font-size: 1.6em;
+    font-size: 1.4em;
+    font-weight: bold;
+}
+.avg_display_value {
+    text-anchor: start;
+    fill: #0191c7;
+    font-family: arial;
+    font-size: 1.8em;
     font-weight: bold;
 }

@@ -100,11 +100,11 @@
             this.height = $containerHeight - svgPadding;
         },
 
-        _convertDates: function(data){
+        _convertDates: function(dataset){
             // Loop through all filtered data and add date objects based on temporal coloumn data
-            for( var i = 0, e = data.length; i < e; i++ ){
+            for( var i = 0, e = dataset.length; i < e; i++ ){
 
-                var row = data[i];
+                var row = dataset[i];
                 var year = row.year;
                 var month = row.month -1; // month range = 0 - 11 
                 var day = row.day;
@@ -113,35 +113,61 @@
                 // Add date property to row containing a new date object
                 row.date = new Date(year, month, day, hour);
             };
-            return data;
+            return dataset;
         },
 
-        _convertPressure: function(data){
+        _convertPressure: function(dataset){
             // Loop through all filtered data and add converted kilopascal value
-            for( var i = 0, e = data.length; i < e; i++ ){
+            for( var i = 0, e = dataset.length; i < e; i++ ){
 
-                var row = data[i];
+                var row = dataset[i];
                 var hectopascal = row.pressure;
                 var conversionFactor = 0.1;
 
                 row.kilopascal = hectopascal * conversionFactor;
             };
-            return data;
+            return dataset;
         },
 
-        _convertWindSpeed: function(data){
+        _convertWindSpeed: function(dataset){
             // Loop through all filtered data and add converted km/h windspeed value
-            for( var i = 0, e = data.length; i < e; i++ ){
+            for( var i = 0, e = dataset.length; i < e; i++ ){
 
-                var row = data[i];
+                var row = dataset[i];
                 var mPerSec = row.wind_speed;
                 var conversionFactor = 3.6;
 
                 row.kmperhour_wind_speed = mPerSec * conversionFactor;
             };
-            return data;
+            return dataset;
         },
 
+        _calcAverage: function(dependentVar){
+            var dataset = this.dataset.filtered;
+            var sum = 0;
+            var count = 0; 
+            var noDataValue = -9999;
+
+            // Loop through all filtered data and add converted km/h windspeed value
+            for( var i = 0, e = dataset.length; i < e; i++ ){
+
+                var row = dataset[i];
+                if( row[dependentVar] ){
+                    if( parseFloat(row[dependentVar]) && parseFloat(row[dependentVar]) !== noDataValue ){
+                        sum = sum + parseFloat(row[dependentVar]);
+                        count = count + 1;
+                    };
+                };
+            };
+
+            // If dataset statistics property doesn't exist, add it
+            if( !this.dataset.statistics ){
+                this.dataset.statistics = {};
+            }
+            
+            // Update statistics for avg of dependent variable
+            this.dataset.statistics["avg_" + dependentVar] = sum/count;
+        },
 
         _calcInitialDateRange: function(dataset){
             var dateRange = {};
@@ -152,8 +178,8 @@
                 var row = dataset[i];
                 var dateValue = row.date.valueOf();
 
-                if (dateRange.hasOwnProperty('filterStartDate')){
-                    if ( dateRange.filterStartDate > dateValue ){
+                if( dateRange.hasOwnProperty('filterStartDate') ){
+                    if( dateRange.filterStartDate > dateValue ){
                         dateRange.filterStartDate = dateValue;
                         dateRange.minDate = dateValue;
                     };
@@ -257,6 +283,11 @@
 
             // Update filtered dataset
             if( updatedDataset.filtered ) this.dataset.filtered = updatedDataset.filtered;
+
+            // Re-calculate averages for air temp, wind speed, and pressure values
+            this._calcAverage("temp_air");
+            this._calcAverage("kmperhour_wind_speed");
+            this._calcAverage("kilopascal");
 
             //this.dataset = dataset;
             this._drawVisualization();
@@ -505,23 +536,44 @@
                 .attr('width', 300)
                 .attr('height',170);
 
+            // Average Air Temperature
             svg.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
                 .attr('y', 270)
-                .text(_loc('Avg Air Temp: '));
+                .text(_loc('Avg Air Temp:'));
 
+            svg.append('text')
+                .attr('class', 'avg_display_value')
+                .attr('x', 185)
+                .attr('y', 270)
+                .text(this.datasetStatistics.avg_temp_air.toFixed(2) + '°C');
+
+            // Average Wind Speed
             svg.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
                 .attr('y', 325)
-                .text(_loc('Avg Wind Speed: '));
+                .text(_loc('Avg Wind Speed:'));
+            
+            svg.append('text')
+                .attr('class', 'avg_display_value')
+                .attr('x', 185)
+                .attr('y', 325)
+                .text(this.datasetStatistics.avg_kmperhour_wind_speed.toFixed(2) + 'km/hr');
 
+            // Average Pressure
             svg.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
                 .attr('y', 380)
-                .text(_loc('Avg Pressure: '));
+                .text(_loc('Avg Pressure:'));
+
+            svg.append('text')
+                .attr('class', 'avg_display_value')
+                .attr('x', 185)
+                .attr('y', 380)
+                .text(this.datasetStatistics.avg_kilopascal.toFixed(2) + 'kPa');
         },
 
         _addControlPanel: function(){          
@@ -649,13 +701,13 @@
             if( opts.dependentVar ){ 
                 this.dependentVar = opts.dependentVar;
             } else {
-                throw new Error('Dependednt variable not provided for line graph');
+                throw new Error('Dependent variable not provided for line graph');
             };
 
             if( opts.dependentLabel ){ 
                 this.dependentLabel = opts.dependentLabel;
             } else {
-                throw new Error('Dependednt variable not provided for line graph');
+                throw new Error('Dependent label not provided for line graph');
             };
 
             if( opts.leftMargin ){ 
