@@ -210,16 +210,23 @@
             this._loadCSVDataset(fileName);
         },
 
-        // _filterDateRange: function(dataset, timeRange){
+        _filterDateRange: function(){
+            var _this = this;
 
-        //     var dateValue = dataset.date.valueOf();
+            var filteredDataset = this.dataset.original.filter(function(row) {
+                var rowDate = row.date.valueOf();
+                if( rowDate >= _this.dataset.statistics.filterStartDate && rowDate <= _this.dataset.statistics.filterEndDate){
+                    return row;
+                };
+            });
 
-        //     if( dateValue >= this.timeRange.filterStartDate && dateValue <= this.timeRange.filterEndDate ){
-        //         return true;
-        //     } else {
-        //         return false;
-        //     };
-        // },
+            var updatedDataset = {
+                filtered: filteredDataset
+            };
+
+            this._updateDataset(updatedDataset);
+
+        },
 
         _updateDateRange: function(dateRanges){
             // Create statistics object if it doesn't exist
@@ -381,6 +388,7 @@
                     filterEndDate: m.filterEndDate
                 };
                 this._updateDateRange(filterDateRanges);
+                this._filterDateRange();
             };
         }   
     });
