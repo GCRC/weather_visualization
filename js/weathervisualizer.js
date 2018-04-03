@@ -26,7 +26,6 @@
         width: null,
         height: null,
         svgPadding: 10,
-        timeRange: {},
         
         initialize: function(opts_){
     
@@ -38,6 +37,8 @@
             },opts_);
             
             var _this = this;
+
+            this.dataset = {};
 
             if( opts.config && opts.config.directory && opts.config.directory.dispatchService){
 
@@ -51,11 +52,10 @@
                 this.dispatchService.register(DH, 'windowResized', f);
                 this.dispatchService.register(DH, 'nextCSVDataset', f);
                 this.dispatchService.register(DH, 'prevCSVDataset', f);
-                this.dispatchService.register(DH, 'updateTimeRange', f);  
+                this.dispatchService.register(DH, 'updateFilterDateRange', f);  
             } else {
                 throw new Error('dispatchService must be specified');
             };
-
 
             if( opts.widgetOptions ){ 
 
@@ -74,9 +74,7 @@
                     this.csvFiles = opts.widgetOptions.csvFiles;
 
                     // initiate visualization dataset with first supplied csv file
-                    if( !this.dataset ){                        
-                        this._loadCSVDataset(this.csvFiles[this.csvFileIndex]);
-                    };
+                    this._loadCSVDataset(this.csvFiles[this.csvFileIndex]);
 
                 } else {
                     throw new Error('weather station CSV data not specified')
@@ -144,6 +142,42 @@
             return data;
         },
 
+
+        _calcInitialDateRange: function(dataset){
+            var dateRange = {};
+
+            // Loop through all filtered data and identify start and end time range
+            for( var i = 0, e = dataset.length; i < e; i++ ){
+
+                var row = dataset[i];
+                var dateValue = row.date.valueOf();
+
+                if (dateRange.hasOwnProperty('filterStartDate')){
+                    if ( dateRange.filterStartDate > dateValue ){
+                        dateRange.filterStartDate = dateValue;
+                        dateRange.minDate = dateValue;
+                    };
+
+                } else {
+                    dateRange.filterStartDate = dateValue;
+                    dateRange.minDate = dateValue;
+                };
+
+                if (dateRange.hasOwnProperty('filterEndDate')){
+                    if ( dateRange.filterEndDate < dateValue ){
+                        dateRange.filterEndDate = dateValue;
+                        dateRange.maxDate = dateValue;
+                    };
+
+                } else {
+                    dateRange.filterEndDate = dateValue;
+                    dateRange.maxDate = dateValue;
+                };
+
+            };
+            this._updateDateRange(dateRange);
+        },
+
         _getCSVFileIndex: function(){
             return this.csvFileIndex;
         },
@@ -163,8 +197,6 @@
         },
 
         _nextDataset: function(){
-            // Reset time range
-            this.timeRange = {};
             this._setCSVFileIndex(1);
             var fileName = this.csvFiles[this._getCSVFileIndex()];
 
@@ -172,9 +204,6 @@
         },
 
         _prevDataset: function(){
-            // Reset time range
-            this.timeRange = {};
-
             this._setCSVFileIndex(-1);
             var fileName = this.csvFiles[this._getCSVFileIndex()];
 
@@ -185,68 +214,44 @@
 
         //     var dateValue = dataset.date.valueOf();
 
-        //     if( dateValue >= this.timeRange.startTime && dateValue <= this.timeRange.endTime ){
+        //     if( dateValue >= this.timeRange.filterStartDate && dateValue <= this.timeRange.filterEndDate ){
         //         return true;
         //     } else {
         //         return false;
         //     };
         // },
 
-        _calcInitialTimeRange: function(dataset){
-            var timeRange = {};
+        _updateDateRange: function(dateRanges){
+            // Create statistics object if it doesn't exist
+            if( !this.dataset.statistics ) this.dataset.statistics = {};
 
-            // Loop through all filtered data and identify start and end time range
-            for( var i = 0, e = dataset.length; i < e; i++ ){
+            // Update minDate statistic
+            if( dateRanges.minDate ) this.dataset.statistics.minDate = dateRanges.minDate;
 
-                var row = dataset[i];
-                var dateValue = row.date.valueOf();
+            // Update maxDate statistic
+            if( dateRanges.maxDate ) this.dataset.statistics.maxDate = dateRanges.maxDate;
 
-                if (timeRange.hasOwnProperty('startTime')){
-                    if ( timeRange.startTime > dateValue ){
-                        timeRange.startTime = dateValue;
-                        timeRange.minTime = dateValue;
-                    };
+            // Update filterStartDate statistic
+            if( dateRanges.filterStartDate ) this.dataset.statistics.filterStartDate = dateRanges.filterStartDate;
 
-                } else {
-                    timeRange.startTime = dateValue;
-                    timeRange.minTime = dateValue;
-                };
-
-                if (timeRange.hasOwnProperty('endTime')){
-                    if ( timeRange.endTime < dateValue ){
-                        timeRange.endTime = dateValue;
-                        timeRange.maxTime = dateValue;
-                    };
-
-                } else {
-                    timeRange.endTime = dateValue;
-                    timeRange.maxTime = dateValue;
-                };
-
-            };
-            this._updateTimeRange(timeRange);
+            // Update filterEndDate statistic
+            if( dateRanges.filterEndDate ) this.dataset.statistics.filterEndDate = dateRanges.filterEndDate;
         },
 
-        _updateTimeRange: function(timeRange){
-            if(timeRange.minTime){
-                this.timeRange.minTime = timeRange.minTime;
-            };
+        _updateDataset: function(updatedDataset){
+            // Create original dataset array if it doesn't exist
+            if( !this.dataset.original ) this.dataset.original = [];
 
-            if(timeRange.maxTime){
-                this.timeRange.maxTime = timeRange.maxTime;
-            };
+            // Create filteted dataset array if it doesn't exist
+            if( !this.dataset.filtered ) this.dataset.filtered = [];
 
-            if(timeRange.startTime){
-                this.timeRange.startTime = timeRange.startTime;
-            };
+            // Update original dataset
+            if( updatedDataset.original ) this.dataset.original = updatedDataset.original;
 
-            if(timeRange.endTime){
-                this.timeRange.endTime = timeRange.endTime;
-            };
-        },
+            // Update filtered dataset
+            if( updatedDataset.filtered ) this.dataset.filtered = updatedDataset.filtered;
 
-        _updateDataset: function(dataset){
-            this.dataset = dataset;
+            //this.dataset = dataset;
             this._drawVisualization();
         },
 
@@ -254,9 +259,9 @@
             var _this = this;
 
             $d.csv(csvFile, function(d){
-
+                var dataset = {};
                 // filter out all rows with null air temperture, wind speed and barometric pressure values from the dataset
-                var dataset = d.filter(function(d) {
+                var originalDataset = d.filter(function(d) {
                     var noDataValue = "-9999";
                     if( d.temp_air !== noDataValue && d.pressure !== noDataValue && d.wind_speed !== noDataValue ){
                         return d;
@@ -264,12 +269,17 @@
                 });
 
                 // Convert dates, pressure and wind speed. 
-                dataset = _this._convertDates(dataset);
-                dataset = _this._convertPressure(dataset);
-                dataset = _this._convertWindSpeed(dataset);
+                originalDataset = _this._convertDates(originalDataset);
+                originalDataset = _this._convertPressure(originalDataset);
+                originalDataset = _this._convertWindSpeed(originalDataset);
 
-                // Calculate the initial time range of the entire dataset if timeRange not defined
-                _this._calcInitialTimeRange(dataset);
+                // Calculate the initial date range of the entire dataset if date statistics are not defined
+                _this._calcInitialDateRange(originalDataset);
+
+                dataset = {
+                    original: originalDataset,
+                    filtered: originalDataset
+                };
 
                 _this._updateDataset(dataset);
             });
@@ -295,7 +305,7 @@
             
             var airTempGraphProperties = {
                 containerId: this.containerId,
-                dataset: this.dataset,
+                dataset: this.dataset.filtered,
                 dependentVar: "temp_air",
                 dependentLabel: "Air Temp °C",
                 dispatchService: this.dispatchService,
@@ -307,7 +317,7 @@
 
             var windSpeedGraphProperties = {
                 containerId: this.containerId,
-                dataset: this.dataset,
+                dataset: this.dataset.filtered,
                 dependentVar: "kmperhour_wind_speed",
                 dependentLabel: "Wind Speed km/hr",
                 dispatchService: this.dispatchService,
@@ -319,7 +329,7 @@
 
             var pressureGraphProperties = {
                 containerId: this.containerId,
-                dataset: this.dataset,
+                dataset: this.dataset.filtered,
                 dependentVar: "kilopascal",
                 dependentLabel: "Pressure kPa",
                 dispatchService: this.dispatchService,
@@ -340,7 +350,7 @@
                 dispatchService: this.dispatchService,
                 csvFiles: this.csvFiles,
                 csvFileIndex: this.csvFileIndex,
-                timeRange: this.timeRange,
+                datasetStatistics: this.dataset.statistics,
                 width: this.width
             };
 
@@ -365,12 +375,12 @@
                 // Update dataset with prev one
                 this._prevDataset();
 
-            } else if( 'updateTimeRange' === m.type ){
-                var newTimeRange = {
-                    startTime: m.startTime,
-                    endTime: m.endTime
+            } else if( 'updateFilterDateRange' === m.type ){
+                var filterDateRanges = {
+                    filterStartDate: m.filterStartDate,
+                    filterEndDate: m.filterEndDate
                 };
-                this._updateTimeRange(newTimeRange);
+                this._updateDateRange(filterDateRanges);
             };
         }   
     });
@@ -380,7 +390,7 @@
         width: null,
         csvFiles: null,
         csvFileIndex: 0,
-        timeRange: null,
+        datasetStatistics: null,
         dispatchService: null,
 
         initialize: function(opts_){
@@ -390,7 +400,7 @@
                 width: null,
                 csvFiles: null,
                 csvFileIndex: null,
-                timeRange: null,
+                datasetStatistics: null,
                 dispatchService: null,
             },opts_);
 
@@ -416,8 +426,8 @@
                 this.csvFileIndex = opts.csvFileIndex;
             };
 
-            if( opts.timeRange ){ 
-                this.timeRange = opts.timeRange;
+            if( opts.datasetStatistics ){ 
+                this.datasetStatistics = opts.datasetStatistics;
             };
 
             // Add Navbar to container
@@ -528,16 +538,18 @@
 
             slideRange.slider({
                 range: true,
-                min: this.timeRange.minTime,
-                max: this.timeRange.maxTime,
-                values:[this.timeRange.startTime, this.timeRange.endTime],
+                min: this.datasetStatistics.minDate,
+                max: this.datasetStatistics.maxDate,
+                values:[this.datasetStatistics.filterStartDate, this.datasetStatistics.filterEndDate],
                 slide: function( event, ui ){
                     dateMinValue.val(new Date(ui.values[0]).toLocaleString('en-GB'));
                     dateMaxValue.val(new Date(ui.values[1]).toLocaleString('en-GB'));
+                },
+                stop: function( event, ui ){
                     _this.dispatchService.synchronousCall(DH,{
-                        type: 'updateTimeRange',
-                        startTime: ui.values[0],
-                        endTime: ui.values[1]
+                        type: 'updateFilterDateRange',
+                        filterStartDate: ui.values[0],
+                        filterEndDate: ui.values[1]
                     });
                 }
             });
@@ -555,7 +567,7 @@
             var dateMinValue = $('<input>')
                 .attr('id', 'minDateValue')
                 .attr('readonly', true)
-                .val(new Date(this.timeRange.startTime).toLocaleString('en-GB'))
+                .val(new Date(this.datasetStatistics.filterStartDate).toLocaleString('en-GB'))
                 .appendTo(dateMin);
             
             var dateMax = $('<div>')
@@ -571,7 +583,7 @@
             var dateMaxValue = $('<input>')
                 .attr('id', 'maxDateValue')
                 .attr('readonly', true)
-                .val(new Date(this.timeRange.endTime).toLocaleString('en-GB'))
+                .val(new Date(this.datasetStatistics.filterEndDate).toLocaleString('en-GB'))
                 .appendTo(dateMax);
         }
     });
