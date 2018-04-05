@@ -493,14 +493,17 @@
             var _this = this;
             var svg = $d.select(this.containerId + ' svg');
 
-            var datasetNavbar = svg.append('rect')
-                .attr('id','navbar')
+            var datasetNavbar = svg.append('g')
+                .attr('id','navbar');
+
+            datasetNavbar.append('rect')
+                .attr('id','navbar_background')
                 .attr('x',0)
                 .attr('y',0)
                 .attr('width', this.width)
                 .attr('height',this.navBarHeight);
 
-            var navBarTitle = svg.append('text')
+            datasetNavbar.append('text')
                 .attr('id', 'navbar_title')
                 .attr('x', this.width/2)
                 .attr('y', 35)
@@ -509,9 +512,9 @@
             // Add nav-bar controls if more than one dataset is available
             if( this.csvFiles.length > 1 ){
             
-                var leftArrow = svg.append('path')
-                    .attr('d','M5,25 25,5 25,10 15,25 25,40 25,45z')
+                var leftArrow = datasetNavbar.append('path')
                     .attr('id','navbar_left_btn')
+                    .attr('d','M5,25 25,5 25,10 15,25 25,40 25,45z')
                     .on('click', function(){
                         _this.dispatchService.synchronousCall(DH,{
                             type: 'prevCSVDataset'
@@ -521,9 +524,9 @@
                 leftArrow.append('title')
                     .text(_loc("Previous"));
 
-                var rightArrow = svg.append('path')
+                var rightArrow = datasetNavbar.append('path')
+                    .attr('id','navbar_right_btn')    
                     .attr('d','M'+(this.width-5) + ',25 ' + (this.width-25) + ',5 ' + (this.width-25) + ',10 ' + (this.width-15)+',25 '+(this.width-25)+',40 '+(this.width-25)+',45z')
-                    .attr('id','navbar_right_btn')
                     .on('click', function(){
                         _this.dispatchService.synchronousCall(DH,{
                             type: 'nextCSVDataset'
