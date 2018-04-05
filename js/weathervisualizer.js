@@ -732,6 +732,36 @@
                 throw new Error('Top margin not provided for line graph');
             };
 
+            // Define and add a fill gradient for use by the line graph
+            var svg = $d.select(this.containerId + ' svg');
+
+            // Add a defs element if it doesn't exist
+            if( svg.select('defs').empty() ){
+                svg.append('defs');
+            };
+
+            var defs = svg.select('defs');
+
+            if( defs.select('#areaFillGradient').empty() ){
+                // Add linear gradient to defs element
+                var linearGradient = defs.append('linearGradient')
+                    .attr('id','areaFillGradient')
+                    .attr("x1",'0%')
+                    .attr("y1",'0%')
+                    .attr("x2",'0%')
+                    .attr('y2','100%');
+
+                linearGradient.append('stop')
+                    .attr('offset', '0%')
+                    .attr('stop-opacity', 0.8)
+                    .attr('stop-color', '#0191c7');
+
+                linearGradient.append('stop')
+                    .attr('offset', '100%')
+                    .attr('stop-opacity', 0)
+                    .attr('stop-color', '#0191c7');
+            };
+
             // Define Scales
             this.xScale = this._defineXScale();
             this.yScale = this._defineYScale();
@@ -793,25 +823,6 @@
             var _this = this;
             var svg = $d.select(this.containerId + ' svg');
 
-            // Define fill gradient used by line graph
-            var defs = svg.append('defs');
-            var linearGradient = defs.append('linearGradient')
-                .attr('id','areaFillGradient')
-                .attr("x1",'0%')
-                .attr("y1",'0%')
-                .attr("x2",'0%')
-                .attr('y2','100%');
-
-            linearGradient.append('stop')
-                .attr('offset', '0%')
-                .attr('stop-opacity', 0.8)
-                .attr('stop-color', '#0191c7');
-
-            linearGradient.append('stop')
-                .attr('offset', '100%')
-                .attr('stop-opacity', 0)
-                .attr('stop-color', '#0191c7');
-            
             // Initial height of line at the x-axis
             // Used for transition
             var startLine = $d.svg.line()
