@@ -156,29 +156,18 @@
 
         _calcAverage: function(dependentVar){
             var dataset = this.dataset.filtered;
-            var sum = 0;
-            var count = 0; 
-            var noDataValue = -9999;
 
-            // Loop through all filtered data and add converted km/h windspeed value
-            for( var i = 0, e = dataset.length; i < e; i++ ){
-
-                var row = dataset[i];
-                if( row[dependentVar] ){
-                    if( parseFloat(row[dependentVar]) && parseFloat(row[dependentVar]) !== noDataValue ){
-                        sum = sum + parseFloat(row[dependentVar]);
-                        count = count + 1;
-                    };
-                };
-            };
+            var mean = $d.mean(dataset, function(d){
+                return(d[dependentVar]);
+            });
 
             // If dataset statistics property doesn't exist, add it
             if( !this.dataset.statistics ){
                 this.dataset.statistics = {};
-            }
-            
+            };
+
             // Update statistics for avg of dependent variable
-            this.dataset.statistics["avg_" + dependentVar] = sum/count;
+            this.dataset.statistics["avg_" + dependentVar] = mean;
         },
 
         _calcInitialDateRange: function(dataset){
