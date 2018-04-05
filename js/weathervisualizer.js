@@ -542,47 +542,50 @@
             var _this = this;
             var svg = $d.select(this.containerId + ' svg');
 
-            var avgDisplay = svg.append('rect')
-                .attr('id','avg_display')
+            var avgDisplay = svg.append('g')
+                .attr('id','avg_display');
+
+            avgDisplay.append('rect')
+                .attr('id','avg_display_background')
                 .attr('x',15)
                 .attr('y',235)
                 .attr('width', 300)
                 .attr('height',170);
 
             // Average Air Temperature
-            svg.append('text')
+            avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
                 .attr('y', 270)
                 .text(_loc('Avg Air Temp:'));
 
-            svg.append('text')
+            avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
                 .attr('y', 270)
                 .text(this.datasetStatistics.avg_temp_air.toFixed(2) + '°C');
 
             // Average Wind Speed
-            svg.append('text')
+            avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
                 .attr('y', 325)
                 .text(_loc('Avg Wind Speed:'));
             
-            svg.append('text')
+            avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
                 .attr('y', 325)
                 .text(this.datasetStatistics.avg_kmperhour_wind_speed.toFixed(2) + 'km/hr');
 
             // Average Pressure
-            svg.append('text')
+            avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
                 .attr('y', 380)
                 .text(_loc('Avg Pressure:'));
 
-            svg.append('text')
+            avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
                 .attr('y', 380)
@@ -869,7 +872,7 @@
                 });
 
             var lineGraph = svg.append("g")
-                .attr("class", _this.dependentVar + "_graph");
+                .attr("id", _this.dependentVar + "_graph");
             
             // Add path of line graph
             lineGraph.append("path")

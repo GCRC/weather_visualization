@@ -97,7 +97,7 @@ svg .axis text.axis_label {
 }
 
 /* Nav-bar control styling */
-#navbar {
+#navbar_background {
     fill: #999999;
     fill-opacity: 0.2;
 }
@@ -128,7 +128,7 @@ svg .axis text.axis_label {
 }
 
 /* Average Display Styling */
-#avg_display {
+#avg_display_background {
     stroke: #ffffff;
     fill: #333333;
     fill-opacity: 0.2;
