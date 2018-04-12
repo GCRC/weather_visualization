@@ -1,13 +1,5 @@
-#content {
-    background-color: #222222 !important;
-    overflow: auto;
-}
-
-.n2_content_text {
-    display: none;
-}
-
 svg {
+    background: #222222;
     border: 1px solid #555555;
     border-radius: 2px;
     min-height: 425px;
@@ -146,4 +138,21 @@ svg .axis text.axis_label {
     font-family: arial;
     font-size: 1.8em;
     font-weight: bold;
+}
+
+/* Tool Tip Style Rules */
+.tool_tip_cover {
+    fill: none;
+    pointer-events: all;
+}
+.tool_tip_marker {
+    fill: #ffffff;
+    fill-opacity: 0.2;
+    stroke: #ffffff;
+}
+.tool_tip_label {
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 1;
+    cursor: default;
 }

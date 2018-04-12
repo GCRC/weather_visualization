@@ -778,6 +778,9 @@
     
             // Draw graph
             this._drawLineGraph();
+
+            // Draw tool tips
+            this._drawToolTip();
         },
 
         _defineXScale: function(){
@@ -823,6 +826,97 @@
                 .orient("left");
 
             return yAxis;
+        },
+
+        _drawToolTip: function(){
+            var _this = this;
+            var graphId = _this.dependentVar + "_graph";
+            var lineGraph = $d.select("#" + graphId );
+
+            // Add Bisect function for date vales 
+            var bisectDate = $d.bisector(function(d) { return d.date; }).left;
+
+            // Anchor Position function
+            var calcLabelAnchor = function(d){
+                var threshold = 120; // Min distance from the right edge
+
+                // If mouse is near the far right edge, switch anchor from start to end
+                if ( threshold > (_this.width - _this.xScale(d.date)) ){
+                    return "end";
+                } else {
+                    return "start";
+                };
+            };
+
+            var onMouseMovement = function(){
+
+                // Get the date based on the mouse x position
+                var mouseXDate = _this.xScale.invert($d.mouse(this)[0] - _this.leftMargin);
+
+                // Get index of the date based on mouse x position 
+                var i = bisectDate(_this.dataset, mouseXDate, 1);
+
+                // Get the index of previous date and next date based on the index value
+                var prevDate = _this.dataset[i - 1];
+                var nextDate = _this.dataset[i];
+
+                // Select the closest date value to the mouse x position
+                var d = mouseXDate - prevDate.date > nextDate.date - mouseXDate ? nextDate : prevDate;
+    
+                // Update tool tip marker location
+                toolTip.select('#' + graphId + '_tool_tip_marker')
+                    .attr("transform", "translate(" + (_this.xScale(d.date) + _this.leftMargin) + "," + (_this.yScale(d[_this.dependentVar]) + _this.topMargin ) + ")");
+
+                // Update the tool tip text content and location
+                toolTip.select('#' + graphId + '_tool_tip_label_date')
+                    .attr("transform", "translate(" + (_this.xScale(d.date) + _this.leftMargin) + "," + (_this.yScale(d[_this.dependentVar]) + _this.topMargin ) + ")")
+                    .text(d.date.toLocaleString('en-GB'))
+                    .attr('text-anchor', calcLabelAnchor(d));
+
+                // Update the tool tip text content and location
+                toolTip.select('#' + graphId + '_tool_tip_label_dependent')
+                    .attr("transform", "translate(" + (_this.xScale(d.date) + _this.leftMargin) + "," + (_this.yScale(d[_this.dependentVar]) + _this.topMargin ) + ")")
+                    .text(parseFloat(d[_this.dependentVar]).toFixed(2))
+                    .attr('text-anchor', calcLabelAnchor(d));
+            };
+
+            // Remove tool tip group if it already exists
+            if( $('svg #line_graph_tool_tips').length ) $('svg #line_graph_tool_tips').remove();
+
+            // Define rectanglar mask, which hides/shows tooltip based on mouse activity
+            lineGraph.append('rect')
+                .attr('class', 'tool_tip_cover')
+                .attr('width', _this.width)
+                .attr('height', _this.height)
+                .attr('x', _this.leftMargin)
+                .attr('y', _this.topMargin)
+                .on('mouseover', function() { toolTip.style('display', null); })
+                .on('mouseout', function() { toolTip.style('display', 'none'); })
+                .on('mousemove', onMouseMovement);
+
+
+            var toolTip = lineGraph.append('g')
+                .attr('id', graphId + '_tool_tips')
+                .style('display', 'none');
+
+            toolTip.append('circle')
+                .attr('id', graphId + '_tool_tip_marker')
+                .attr('class','tool_tip_marker')
+                .attr('r', 5);
+            
+            // Date Label
+            toolTip.append('text')
+                .attr('id', graphId + '_tool_tip_label_date')
+                .attr('class','tool_tip_label')
+                .attr('dx', 0)
+                .attr('dy', 0);
+
+            // Dependent Variable Label
+            toolTip.append('text')
+                .attr('id', graphId + '_tool_tip_label_dependent')
+                .attr('class','tool_tip_label')
+                .attr('dx', 0)
+                .attr('dy', '1.1em');
         },
 
         _drawLineGraph: function(){
