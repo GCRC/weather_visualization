@@ -170,6 +170,50 @@
             this.dataset.statistics["avg_" + dependentVar] = mean;
         },
 
+        _classifyWindDirs: function(){
+            var dataset = this.dataset.filtered;
+            var windRoseClassification = {
+                N: 0, NNE: 0, NE: 0, ENE: 0,
+                E: 0, ESE: 0, SE: 0, SSE: 0,
+                S: 0, SSW: 0, SW: 0, WSW: 0,
+                W: 0, WNW: 0, NW: 0, NNW: 0
+            };
+
+            // Loop through all filtered data and classify wind directions
+            for( var i = 0, e = dataset.length; i < e; i++ ){
+
+                var row = dataset[i];
+                var windDir = row.wind_direction.valueOf();
+       
+                // Classification of Wind Directions
+                // 16 classes - each 22.5° ranges
+                if( (windDir > 348.75 && windDir <= 360) || (windDir >= 0 && windDir <= 11.25) ) ++windRoseClassification.N;
+                else if( windDir > 11.25 && windDir <= 33.75 ) ++windRoseClassification.NNE;
+                else if( windDir > 33.75 && windDir <= 56.25 ) ++windRoseClassification.NE;
+                else if( windDir > 56.25 && windDir <= 78.75 ) ++windRoseClassification.ENE;
+                else if( windDir > 78.75 && windDir <= 101.25 ) ++windRoseClassification.E;
+                else if( windDir > 101.25 && windDir <= 123.75 ) ++windRoseClassification.ESE;
+                else if( windDir > 123.75 && windDir <= 146.25 ) ++windRoseClassification.SE;
+                else if( windDir > 146.25 && windDir <= 168.75 ) ++windRoseClassification.SSE;
+                else if( windDir > 168.75 && windDir <= 191.25 ) ++windRoseClassification.S;
+                else if( windDir > 191.25 && windDir <= 213.75 ) ++windRoseClassification.SSW;
+                else if( windDir > 213.75 && windDir <= 236.25 ) ++windRoseClassification.SW;
+                else if( windDir > 236.25 && windDir <= 258.75 ) ++windRoseClassification.WSW;
+                else if( windDir > 258.75 && windDir <= 281.25 ) ++windRoseClassification.W;
+                else if( windDir > 281.25 && windDir <= 303.75 ) ++windRoseClassification.WNW;
+                else if( windDir > 303.75 && windDir <= 326.25 ) ++windRoseClassification.NW;
+                else if( windDir > 326.25 && windDir <= 348.75 ) ++windRoseClassification.NNW;
+            };
+        
+            // If dataset statistics property doesn't exist, add it
+            if( !this.dataset.statistics ){
+                this.dataset.statistics = {};
+            };
+
+            // Update statistics for wind rose classification
+            this.dataset.statistics["wind_rose"] = windRoseClassification;
+        },
+
         _calcInitialDateRange: function(dataset){
             var dateRange = {};
 
@@ -289,6 +333,7 @@
             this._calcAverage("temp_air");
             this._calcAverage("kmperhour_wind_speed");
             this._calcAverage("kilopascal");
+            this._classifyWindDirs();
 
             //this.dataset = dataset;
             this._drawVisualization();
