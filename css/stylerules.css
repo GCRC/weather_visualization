@@ -41,7 +41,7 @@ svg .axis text.axis_label {
     top: 75px;
     left: 25px;
     width: 300px;
-    height: 150px;
+    height: 135px;
     border: 1px solid #919191;
     border-radius: 2px;
 }
@@ -77,9 +77,9 @@ svg .axis text.axis_label {
 }
 #control_panel_heading {
     color: #ffffff;
-    margin: 5px 5px;
+    margin: 10px 10px;
     display: block;
-    font-size: 1.2em;
+    font-size: 1.4em;
     font-weight: bold;
     font-family: arial;
 }

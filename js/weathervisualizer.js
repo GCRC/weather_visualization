@@ -389,6 +389,7 @@
             var previousLineGraphBottomPadding = 45;
             var lineGraphLeftMargin = 385;
             
+            // --------------------------------------------------
             var airTempGraphProperties = {
                 containerId: this.containerId,
                 dataset: this.dataset.filtered,
@@ -430,7 +431,17 @@
             var windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
             var pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
 
+            // --------------------------------------------------
+            var windRoseParameters = {
+                containerId: this.containerId,
+                dispatchService: this.dispatchService,
+                dataset: this.dataset.statistics.wind_rose
+            };
 
+            // Create a new Wind Rose
+            var windRose = new WindRose(windRoseParameters);
+
+            // --------------------------------------------------
             var controlPanelParameters = {
                 containerId: this.containerId,
                 dispatchService: this.dispatchService,
@@ -593,47 +604,47 @@
             avgDisplay.append('rect')
                 .attr('id','avg_display_background')
                 .attr('x',15)
-                .attr('y',235)
+                .attr('y',215)
                 .attr('width', 300)
-                .attr('height',170);
+                .attr('height',125);
 
             // Average Air Temperature
             avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
-                .attr('y', 270)
+                .attr('y', 250)
                 .text(_loc('Avg Air Temp:'));
 
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
-                .attr('y', 270)
+                .attr('y', 250)
                 .text(this.datasetStatistics.avg_temp_air.toFixed(2) + '°C');
 
             // Average Wind Speed
             avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
-                .attr('y', 325)
+                .attr('y', 285)
                 .text(_loc('Avg Wind Speed:'));
             
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
-                .attr('y', 325)
+                .attr('y', 285)
                 .text(this.datasetStatistics.avg_kmperhour_wind_speed.toFixed(2) + 'km/hr');
 
             // Average Pressure
             avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
                 .attr('x', 30)
-                .attr('y', 380)
+                .attr('y', 320)
                 .text(_loc('Avg Pressure:'));
 
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
-                .attr('y', 380)
+                .attr('y', 320)
                 .text(this.datasetStatistics.avg_kilopascal.toFixed(2) + 'kPa');
         },
 
@@ -1060,6 +1071,59 @@
                 .attr("class","axis_label")
                 .attr("x",_this.width/2)
                 .attr("y",40);
+        }
+    });
+
+    //--------------------------------------------------------------------------
+    var WindRose = $n2.Class('WindRose', {
+
+        dataset: null,
+        containerId: null,
+        topMargin: 425,
+        padding: {top: 10, right: 10, bottom: 10, left: 10},
+        height: 300,
+        width: 300,
+        scale: null,
+        dispatchService: null,
+        
+        initialize: function(opts_){
+    
+            var opts = $n2.extend({
+                dataset: null,
+                containerId: null,
+                topMargin: null,
+                dispatchService: null
+            },opts_);
+            
+            var _this = this;
+            
+            if( opts.dispatchService ){
+                this.dispatchService = opts.dispatchService;
+            } else {
+                throw new Error('dispatchService not defined in line graph');
+            };
+
+            if( opts.containerId ){ 
+                this.containerId = opts.containerId;
+            } else {
+                throw new Error('ContainerId not provided for line graph');
+            };
+
+            if( opts.dataset ){ 
+                this.dataset = opts.dataset;
+            } else {
+                throw new Error('Dataset not provided for line graph');
+            };
+
+            // Define and add a fill gradient for use by the line graph
+            var svg = $d.select(this.containerId + ' svg');
+    
+            // Draw graph
+            this._drawWindRose();
+        },
+
+        _drawWindRose: function(){
+            console.log("Drawing Wind Rose!")
         }
     });
     
