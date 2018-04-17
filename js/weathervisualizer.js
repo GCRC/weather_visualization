@@ -25,7 +25,7 @@
         dispatchService: null,
         width: null,
         height: null,
-        minSVGHeight: 425,
+        minSVGHeight: 640,
         minSVGWidth: 825,
         svgPadding: 10,
         
@@ -1103,6 +1103,7 @@
         yOrigin: 355,
         xOrigin: 15,
         radius: 150,
+        padding: 20,
         scale: null,
         dispatchService: null,
         
@@ -1135,7 +1136,16 @@
             } else {
                 throw new Error('Dataset not provided for line graph');
             };
+
+            var svg = $d.select(this.containerId + ' svg');
+            
+            // Add group for wind rose
+            this.windrose = svg.append('g')
+                .attr('id','windrose');
     
+            // Display Wind Rose Axis
+            this._displayWindRoseAxis();
+
             // Display Wind Rose
             this._displayWindRose();
         },
@@ -1149,14 +1159,33 @@
                     $d.max(this.dataset, function(d){
                     return d.count})
                 ])
-                .range([0, (this.radius - 10)]);
+                .range([0, (this.radius - this.padding)]);
 
             return windRoseScale;
         },
 
+        _displayWindRoseAxis: function(){
+            // Add group for axis
+            var axisGroup = this.windrose.append('g')
+                .attr('id', 'wind_rose_axis')
+                .attr('transform','translate(' + (this.radius + this.xOrigin) + ', ' + (this.radius + this.yOrigin) + ')');
+
+            axisGroup.append('circle')
+                .attr('id', 'wind_rose_outeraxis')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', this.radius - this.padding);
+
+            axisGroup.append('circle')
+                .attr('id', 'wind_rose_inneraxis')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', (this.radius - this.padding)/2);
+         
+        },
+
         _displayWindRose: function(){
             var _this = this;
-            var svg = $d.select(this.containerId + ' svg');
             
             var arc = $d.svg.arc()
                 .innerRadius(0)
@@ -1167,13 +1196,10 @@
                     return d.endAngle;
                 });
             
-            // Add group for wind rose
-            var windrose = svg.append('g')
-                .attr('id','windrose');
-
             // Add group for arcs
-            var arcsGroup = windrose.append('g')
-               .attr('transform','translate(' + (radius + this.xOrigin) + ', ' + (radius + this.yOrigin) + ')');
+            var arcsGroup = this.windrose.append('g')
+                .attr('id', 'wind_rose_arcs')
+                .attr('transform','translate(' + (this.radius + this.xOrigin) + ', ' + (this.radius + this.yOrigin) + ')');
 
             // Generate Arcs
             arcsGroup.selectAll('path')

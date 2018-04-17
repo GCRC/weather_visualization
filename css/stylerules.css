@@ -159,6 +159,13 @@ svg .axis text.axis_label {
 
 /* Wind Rose Style Rules */
 .wind_rose_arc {
-    stroke: none;
+    stroke: #0191c7;
     fill: #0191c7;
+    fill-opacity: 0.6;
+}
+#wind_rose_outeraxis,
+#wind_rose_inneraxis {
+    stroke: #919191;
+    stroke-width: 0.5;
+    fill: none;
 }
