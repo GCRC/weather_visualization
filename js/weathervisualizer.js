@@ -25,7 +25,7 @@
         dispatchService: null,
         width: null,
         height: null,
-        minSVGHeight: 640,
+        minSVGHeight: 595,
         minSVGWidth: 825,
         svgPadding: 10,
         
@@ -54,7 +54,7 @@
                 this.dispatchService.register(DH, 'windowResized', f);
                 this.dispatchService.register(DH, 'nextCSVDataset', f);
                 this.dispatchService.register(DH, 'prevCSVDataset', f);
-                this.dispatchService.register(DH, 'updateFilterDateRange', f);  
+                this.dispatchService.register(DH, 'updateFilterDateRange', f);
             } else {
                 throw new Error('dispatchService must be specified');
             };
@@ -87,7 +87,7 @@
         },
 
         _getWindowWidth: function(){
-            // Acquire width value for the container element
+            // Gey width for the container element
             var $containerWidth = $(this.containerId).width();
             var svgPadding = this.svgPadding * 2;
 
@@ -96,11 +96,10 @@
             } else {
                 this.width = $containerWidth - svgPadding;
             };
-            
         },
 
         _getWindowHeight: function(){
-            // Acquire height value for the container element
+            // Get height for the container element
             var $containerHeight = $(this.containerId).height();
             var svgPadding = this.svgPadding * 2;
 
@@ -108,8 +107,7 @@
                 this.height = this.minSVGHeight;
             } else {
                 this.height = $containerHeight - svgPadding;
-            };
-            
+            };            
         },
 
         _convertDates: function(dataset){
@@ -355,9 +353,10 @@
             this._calcAverage("temp_air");
             this._calcAverage("kmperhour_wind_speed");
             this._calcAverage("kilopascal");
+
+            // Classify wind dirs for Wind Rose
             this._classifyWindDirs();
 
-            //this.dataset = dataset;
             this._drawVisualization();
         },
 
@@ -402,14 +401,15 @@
             // Draw svg 
             var svg = $d.select(this.containerId)
                 .append('svg')
+                    .attr('id', 'weather_data_visualization')
                     .attr('width', this.width)
                     .attr('height', this.height)
                     .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
     
-            var navBarHeight = 50;
             var lineGraphTopMargin = 20;
             var previousLineGraphBottomPadding = 45;
             var lineGraphLeftMargin = 385;
+            var navBarHeight = 50;
             
             // --------------------------------------------------
             var airTempGraphProperties = {
@@ -524,7 +524,7 @@
                 csvFileIndex: null,
                 datasetStatistics: null,
                 dispatchService: null,
-                navBarHeight: null,
+                navBarHeight: null
             },opts_);
 
             if( opts.dispatchService ){
@@ -537,12 +537,12 @@
                 this.containerId = opts.containerId;
             };
 
-            if( opts.width ){ 
-                this.width = opts.width;
-            };
-
             if( opts.navBarHeight ){ 
                 this.navBarHeight = opts.navBarHeight;
+            };
+
+            if( opts.width ){ 
+                this.width = opts.width;
             };
 
             if( opts.csvFiles ){ 
@@ -624,55 +624,95 @@
                 .attr('id','avg_display');
 
             avgDisplay.append('rect')
-                .attr('id','avg_display_background')
+                .attr('class','panel_background')
                 .attr('x',15)
-                .attr('y',215)
+                .attr('y',180)
                 .attr('width', 300)
-                .attr('height',125);
+                .attr('height',90);
 
-            // Average Air Temperature
+            // Title Bar and Label
+            avgDisplay.append('rect')
+            .attr('class','panel_title_background')
+                .attr('x',15)
+                .attr('y',180)
+                .attr('width', 300)
+                .attr('height',26);
+
+            avgDisplay.append('text')
+                .attr('class', 'panel_title')
+                .attr('x', 25)
+                .attr('y', 200)
+                .text(_loc('Averages'));
+
+            // Air Temperature
             avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
-                .attr('x', 30)
-                .attr('y', 250)
-                .text(_loc('Avg Air Temp:'));
+                .attr('x', 25)
+                .attr('y', 221)
+                .text(_loc('Air Temp:'));
 
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
-                .attr('y', 250)
+                .attr('y', 221)
                 .text(this.datasetStatistics.avg_temp_air.toFixed(2) + '°C');
 
-            // Average Wind Speed
+            // Wind Speed
             avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
-                .attr('x', 30)
-                .attr('y', 285)
-                .text(_loc('Avg Wind Speed:'));
+                .attr('x', 25)
+                .attr('y', 241)
+                .text(_loc('Wind Speed:'));
             
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
-                .attr('y', 285)
+                .attr('y', 241)
                 .text(this.datasetStatistics.avg_kmperhour_wind_speed.toFixed(2) + 'km/hr');
 
-            // Average Pressure
+            // Pressure
             avgDisplay.append('text')
                 .attr('class', 'avg_display_label')
-                .attr('x', 30)
-                .attr('y', 320)
-                .text(_loc('Avg Pressure:'));
+                .attr('x', 25)
+                .attr('y', 261)
+                .text(_loc('Pressure:'));
 
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
                 .attr('x', 185)
-                .attr('y', 320)
+                .attr('y', 261)
                 .text(this.datasetStatistics.avg_kilopascal.toFixed(2) + 'kPa');
         },
 
         _addControlPanel: function(){          
 
-            // Remove control panel if it already exists
+            var svg = $d.select(this.containerId + ' svg');
+
+            var dateRangePanel = svg.append('g')
+                .attr('id','date_range');
+
+            dateRangePanel.append('rect')
+                .attr('class','panel_background')
+                .attr('x',15)
+                .attr('y',65)
+                .attr('width', 300)
+                .attr('height',105);
+
+            // Title Bar and Label
+            dateRangePanel.append('rect')
+                .attr('class','panel_title_background')
+                .attr('x',15)
+                .attr('y',65)
+                .attr('width', 300)
+                .attr('height',26);
+
+            dateRangePanel.append('text')
+                .attr('class', 'panel_title')
+                .attr('x', 25)
+                .attr('y', 85)
+                .text(_loc('Date Range'));
+
+            // Remove HTML control panel elements if it already exists
             if( $(this.containerId + ' #control_panel').length ) $(this.containerId + ' #control_panel').remove();
             
             var _this = this;
@@ -680,11 +720,6 @@
             var controlPanel = $('<div>')
                 .attr('id', 'control_panel')
                 .appendTo(this.containerId);
-            
-            var controlPanelLabel = $('<span>')
-                .attr('id', 'control_panel_heading')
-                .text(_loc('Date Range'))
-                .appendTo(controlPanel);
 
             var slideRange = $('<div>')
                 .attr('id', 'slide-range')
@@ -1101,7 +1136,7 @@
 
         dataset: null,
         containerId: null,
-        yOrigin: 355,
+        yOrigin: 280,
         xOrigin: 15,
         radius: 150,
         padding: 20,

@@ -1,47 +1,62 @@
-svg {
+svg#weather_data_visualization {
     background: #222222;
     border: 1px solid #555555;
     border-radius: 2px;
 }
 
 /* Line Graph Style Rules */
-svg path.line { 
+svg#weather_data_visualization path.line { 
     stroke: #0191c7;
     fill: #0191c7;
     fill-opacity: 0.0;
 }
 
-svg path.area {
+svg#weather_data_visualization path.area {
     stroke-width: 0;
 }
 
-svg .axis path,
-svg .axis line {
+svg#weather_data_visualization .axis path,
+svg#weather_data_visualization .axis line {
     fill: none;
     stroke: #ffffff;
 }
 
-svg .axis text {
+svg#weather_data_visualization .axis text {
     font-size: 10px; 
     font-family: sans-serif;
     stroke: #ffffff;
 }
 
-svg .axis text.axis_label {
+svg#weather_data_visualization .axis text.axis_label {
     font-size: 14px;
     fill: #ffffff;
     text-anchor: middle;
 }
 
 /* Control Panel Style Rules */
+.panel_background {
+    stroke: #ffffff;
+    stroke-width: 0.2;
+    fill: none;
+}
+.panel_title {
+    text-anchor: start;
+    fill: #ffffff;
+    font-family: arial;
+    font-size: 1.4em;
+    font-weight: bold;
+}
+.panel_title_background {
+    fill: #999999;
+    fill-opacity: 0.2;
+}
+
 #control_panel {
     position: absolute;
-    top: 75px;
+    top: 100px;
     left: 25px;
     width: 300px;
-    height: 135px;
-    border: 1px solid #919191;
-    border-radius: 2px;
+    height: 80px;
 }
 #slide-range {
     width: 270px;
@@ -59,7 +74,7 @@ svg .axis text.axis_label {
 }
 #date_min, 
 #date_max {
-    margin: 20px 10px 0px 10px;
+    margin: 10px 10px 0px 10px;
     border-bottom: 1px dashed #999999;
     
 }
@@ -69,6 +84,8 @@ svg .axis text.axis_label {
     color: white;
     border: none;
     line-height: normal;
+    font-size: 1.1em;
+    font-family: arial;
     max-width: 190px;
     float: right;
     margin-right: 15px;
@@ -84,6 +101,8 @@ svg .axis text.axis_label {
 .range_label {
     color: #ffffff;
     margin-left: 5px;
+    font-family: arial;
+    font-size: 1.1em;
 }
 
 /* Nav-bar control styling */
@@ -118,24 +137,17 @@ svg .axis text.axis_label {
 }
 
 /* Average Display Styling */
-#avg_display_background {
-    stroke: #ffffff;
-    fill: #333333;
-    fill-opacity: 0.2;
-}
 .avg_display_label {
     text-anchor: start;
     fill: #ffffff;
     font-family: arial;
-    font-size: 1.4em;
-    font-weight: bold;
+    font-size: 1.1em;
 }
 .avg_display_value {
     text-anchor: start;
-    fill: #0191c7;
+    fill: #2ab9ef;
     font-family: arial;
-    font-size: 1.8em;
-    font-weight: bold;
+    font-size: 1.1em;
 }
 
 /* Tool Tip Style Rules */
