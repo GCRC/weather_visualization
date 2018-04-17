@@ -1263,16 +1263,23 @@
                 .attr('id', 'wind_rose_arcs')
                 .attr('transform','translate(' + (this.radius + this.xOrigin) + ', ' + (this.radius + this.yOrigin) + ')');
 
+                
             // Generate Arcs
             arcsGroup.selectAll('path')
                 .data(this.dataset)
                 .enter()
                 .append("path")
-                .each(function(d) { 
-                    d.outerRadius = _this.scale(d.count); 
-                })
                 .attr('class','wind_rose_arc')
-                .attr('d', arc);
+                .each(function(d) { 
+                    d.outerRadius = 0; 
+                })
+                .attr('d', arc)                          
+                .transition()
+                    .duration(1000)
+                    .each(function(d) {
+                        d.outerRadius = _this.scale(d.count);
+                    })
+                    .attr('d', arc);
         }
     });
     
