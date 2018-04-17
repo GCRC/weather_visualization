@@ -191,7 +191,8 @@
                 { dir:'NNW', count:0, startAngle: 5.694137, endAngle: 6.086836 }
             ];
 
-            var incrementWindDir = function(windDir){
+            // Increment count for specified wind direction
+            function incrementWindDir(windDir){
                 for( var i = 0; i < windRoseClassification.length; ++i){
                     if ( windRoseClassification[i].dir === windDir ){
                         ++windRoseClassification[i].count;
@@ -1165,10 +1166,37 @@
         },
 
         _displayWindRoseAxis: function(){
+
             // Add group for axis
             var axisGroup = this.windrose.append('g')
-                .attr('id', 'wind_rose_axis')
-                .attr('transform','translate(' + (this.radius + this.xOrigin) + ', ' + (this.radius + this.yOrigin) + ')');
+            .attr('id', 'wind_rose_axis')
+            .attr('transform','translate(' + (this.radius + this.xOrigin) + ', ' + (this.radius + this.yOrigin) + ')');
+
+            function drawDirectionCenterLines(rotation){
+                axisGroup.append('line')
+                    .attr('class','wind_rose_axis_line')
+                    .attr('x1',0)
+                    .attr('y1',-130)
+                    .attr('x2',0)
+                    .attr('y2',0)
+                    .attr('transform', 'rotate(' + rotation + ' 0 0)');
+            };
+
+            function drawDirectionLabels(label, rotation){
+                axisGroup.append('text')
+                    .text(label)
+                    .attr('class','wind_rose_axis_label')
+                    .attr('x',0)
+                    .attr('y',-135)
+                    .attr('transform', 'rotate(' + rotation + ' 0 0)');
+            };
+
+            // Add all lines and labels to wind rose
+            for ( var i = 0; i < this.dataset.length; ++i ){
+                var rotationFactor = 22.5;
+                drawDirectionCenterLines(i * rotationFactor);
+                drawDirectionLabels(this.dataset[i].dir, i * rotationFactor);
+            };
 
             axisGroup.append('circle')
                 .attr('id', 'wind_rose_outeraxis')
@@ -1180,8 +1208,7 @@
                 .attr('id', 'wind_rose_inneraxis')
                 .attr('cx', 0)
                 .attr('cy', 0)
-                .attr('r', (this.radius - this.padding)/2);
-         
+                .attr('r', (this.radius - this.padding)/2);         
         },
 
         _displayWindRose: function(){

@@ -2,8 +2,6 @@ svg {
     background: #222222;
     border: 1px solid #555555;
     border-radius: 2px;
-    min-height: 425px;
-    min-width: 825px;
 }
 
 /* Line Graph Style Rules */
@@ -164,8 +162,16 @@ svg .axis text.axis_label {
     fill-opacity: 0.6;
 }
 #wind_rose_outeraxis,
-#wind_rose_inneraxis {
+#wind_rose_inneraxis,
+.wind_rose_axis_line {
     stroke: #919191;
     stroke-width: 0.5;
     fill: none;
+}
+
+.wind_rose_axis_label {
+    text-anchor: middle;
+    fill: #919191;
+    font-family: arial;
+    font-size: 1em;
 }
