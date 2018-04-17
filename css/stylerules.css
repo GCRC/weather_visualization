@@ -156,3 +156,9 @@ svg .axis text.axis_label {
     stroke-width: 1;
     cursor: default;
 }
+
+/* Wind Rose Style Rules */
+.wind_rose_arc {
+    stroke: none;
+    fill: #0191c7;
+}

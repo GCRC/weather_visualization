@@ -172,11 +172,32 @@
 
         _classifyWindDirs: function(){
             var dataset = this.dataset.filtered;
-            var windRoseClassification = {
-                N: 0, NNE: 0, NE: 0, ENE: 0,
-                E: 0, ESE: 0, SE: 0, SSE: 0,
-                S: 0, SSW: 0, SW: 0, WSW: 0,
-                W: 0, WNW: 0, NW: 0, NNW: 0
+            var windRoseClassification = [
+                { dir:'N', count:0, startAngle: 6.086836, endAngle: 6.479535 },
+                { dir:'NNE', count:0, startAngle: 0.1963495, endAngle: 0.5890486 },
+                { dir:'NE', count:0, startAngle: 0.5890486, endAngle: 0.9817477 },
+                { dir:'ENE', count:0, startAngle: 0.9817477, endAngle: 1.374447 },
+                { dir:'E', count:0, startAngle: 1.374447, endAngle: 1.767146, },
+                { dir:'ESE', count:0, startAngle: 1.767146, endAngle: 2.159845 },
+                { dir:'SE', count:0, startAngle: 2.159845, endAngle: 2.552544 },
+                { dir:'SSE', count:0, startAngle: 2.552544, endAngle: 2.945243 },
+                { dir:'S', count:0, startAngle: 2.945243, endAngle: 3.337942 },
+                { dir:'SSW', count:0, startAngle: 3.337942, endAngle: 3.730641 },
+                { dir:'SW', count:0, startAngle: 3.730641, endAngle: 4.12334 },
+                { dir:'WSW', count:0, startAngle: 4.12334, endAngle: 4.516039 },
+                { dir:'W', count:0, startAngle: 4.516039, endAngle: 4.908739 },
+                { dir:'WNW', count:0, startAngle: 4.908739, endAngle: 5.301438 },
+                { dir:'NW', count:0, startAngle: 5.301438, endAngle: 5.694137 },
+                { dir:'NNW', count:0, startAngle: 5.694137, endAngle: 6.086836 }
+            ];
+
+            var incrementWindDir = function(windDir){
+                for( var i = 0; i < windRoseClassification.length; ++i){
+                    if ( windRoseClassification[i].dir === windDir ){
+                        ++windRoseClassification[i].count;
+                        return;
+                    };
+                };
             };
 
             // Loop through all filtered data and classify wind directions
@@ -187,22 +208,22 @@
        
                 // Classification of Wind Directions
                 // 16 classes - each 22.5° ranges
-                if( (windDir > 348.75 && windDir <= 360) || (windDir >= 0 && windDir <= 11.25) ) ++windRoseClassification.N;
-                else if( windDir > 11.25 && windDir <= 33.75 ) ++windRoseClassification.NNE;
-                else if( windDir > 33.75 && windDir <= 56.25 ) ++windRoseClassification.NE;
-                else if( windDir > 56.25 && windDir <= 78.75 ) ++windRoseClassification.ENE;
-                else if( windDir > 78.75 && windDir <= 101.25 ) ++windRoseClassification.E;
-                else if( windDir > 101.25 && windDir <= 123.75 ) ++windRoseClassification.ESE;
-                else if( windDir > 123.75 && windDir <= 146.25 ) ++windRoseClassification.SE;
-                else if( windDir > 146.25 && windDir <= 168.75 ) ++windRoseClassification.SSE;
-                else if( windDir > 168.75 && windDir <= 191.25 ) ++windRoseClassification.S;
-                else if( windDir > 191.25 && windDir <= 213.75 ) ++windRoseClassification.SSW;
-                else if( windDir > 213.75 && windDir <= 236.25 ) ++windRoseClassification.SW;
-                else if( windDir > 236.25 && windDir <= 258.75 ) ++windRoseClassification.WSW;
-                else if( windDir > 258.75 && windDir <= 281.25 ) ++windRoseClassification.W;
-                else if( windDir > 281.25 && windDir <= 303.75 ) ++windRoseClassification.WNW;
-                else if( windDir > 303.75 && windDir <= 326.25 ) ++windRoseClassification.NW;
-                else if( windDir > 326.25 && windDir <= 348.75 ) ++windRoseClassification.NNW;
+                if( (windDir > 348.75 && windDir <= 360) || (windDir >= 0 && windDir <= 11.25) ) incrementWindDir('N');
+                else if( windDir > 11.25 && windDir <= 33.75 ) incrementWindDir('NNE');
+                else if( windDir > 33.75 && windDir <= 56.25 ) incrementWindDir('NE');
+                else if( windDir > 56.25 && windDir <= 78.75 ) incrementWindDir('ENE');
+                else if( windDir > 78.75 && windDir <= 101.25 ) incrementWindDir('E');
+                else if( windDir > 101.25 && windDir <= 123.75 ) incrementWindDir('ESE');
+                else if( windDir > 123.75 && windDir <= 146.25 ) incrementWindDir('SE');
+                else if( windDir > 146.25 && windDir <= 168.75 ) incrementWindDir('SSE');
+                else if( windDir > 168.75 && windDir <= 191.25 ) incrementWindDir('S');
+                else if( windDir > 191.25 && windDir <= 213.75 ) incrementWindDir('SSW');
+                else if( windDir > 213.75 && windDir <= 236.25 ) incrementWindDir('SW');
+                else if( windDir > 236.25 && windDir <= 258.75 ) incrementWindDir('WSW');
+                else if( windDir > 258.75 && windDir <= 281.25 ) incrementWindDir('W');
+                else if( windDir > 281.25 && windDir <= 303.75 ) incrementWindDir('WNW');
+                else if( windDir > 303.75 && windDir <= 326.25 ) incrementWindDir('NW');
+                else if( windDir > 326.25 && windDir <= 348.75 ) incrementWindDir('NNW');
             };
         
             // If dataset statistics property doesn't exist, add it
@@ -1079,10 +1100,9 @@
 
         dataset: null,
         containerId: null,
-        topMargin: 425,
-        padding: {top: 10, right: 10, bottom: 10, left: 10},
-        height: 300,
-        width: 300,
+        yOrigin: 355,
+        xOrigin: 15,
+        radius: 150,
         scale: null,
         dispatchService: null,
         
@@ -1111,19 +1131,60 @@
 
             if( opts.dataset ){ 
                 this.dataset = opts.dataset;
+                this.scale = this._defineScale();
             } else {
                 throw new Error('Dataset not provided for line graph');
             };
-
-            // Define and add a fill gradient for use by the line graph
-            var svg = $d.select(this.containerId + ' svg');
     
-            // Draw graph
-            this._drawWindRose();
+            // Display Wind Rose
+            this._displayWindRose();
         },
 
-        _drawWindRose: function(){
-            console.log("Drawing Wind Rose!")
+        _defineScale: function(){
+            var _this = this;
+
+            var windRoseScale = $d.scale.linear()
+                .domain([$d.min(this.dataset, function(d){
+                    return d.count}),
+                    $d.max(this.dataset, function(d){
+                    return d.count})
+                ])
+                .range([0, (this.radius - 10)]);
+
+            return windRoseScale;
+        },
+
+        _displayWindRose: function(){
+            var _this = this;
+            var svg = $d.select(this.containerId + ' svg');
+            
+            var arc = $d.svg.arc()
+                .innerRadius(0)
+                .startAngle(function(d){
+                    return d.startAngle;
+                })
+                .endAngle(function(d){
+                    return d.endAngle;
+                });
+            
+            // Add group for wind rose
+            var windrose = svg.append('g')
+                .attr('id','windrose');
+
+            // Add group for arcs
+            var arcsGroup = windrose.append('g')
+               .attr('transform','translate(' + (radius + this.xOrigin) + ', ' + (radius + this.yOrigin) + ')');
+
+            // Generate Arcs
+            arcsGroup.selectAll('path')
+                .data(this.dataset)
+                .enter()
+                .append("path")
+                .each(function(d) { 
+                    d.outerRadius = _this.scale(d.count); 
+                })
+                .attr('class','wind_rose_arc')
+                .attr('d', arc);
         }
     });
     
