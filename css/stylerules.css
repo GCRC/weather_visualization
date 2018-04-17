@@ -129,11 +129,11 @@ svg#weather_data_visualization .axis text.axis_label {
 
 #navbar_left_btn:hover,
 #navbar_right_btn:hover {
-    fill: #b3b3b3;
-    fill-opacity: 0.5;
-    stroke: #cccccc;
+    fill: #0191c7;
+    fill-opacity: 0.8;
+    stroke: #0191c7;
     stroke-width: 1;
-    stroke-opacity: 0.5;
+    stroke-opacity: 1;
 }
 
 /* Average Display Styling */

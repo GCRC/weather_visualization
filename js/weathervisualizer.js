@@ -25,7 +25,7 @@
         dispatchService: null,
         width: null,
         height: null,
-        minSVGHeight: 595,
+        minSVGHeight: 610,
         minSVGWidth: 825,
         svgPadding: 10,
         
@@ -76,7 +76,7 @@
                     this.csvFiles = opts.widgetOptions.csvFiles;
 
                     // initiate visualization dataset with first supplied csv file
-                    this._loadCSVDataset(this.csvFiles[this.csvFileIndex]);
+                    this._loadCSVDataset(this.csvFiles[this.csvFileIndex].data);
 
                 } else {
                     throw new Error('weather station CSV data not specified')
@@ -289,14 +289,14 @@
 
         _nextDataset: function(){
             this._setCSVFileIndex(1);
-            var fileName = this.csvFiles[this._getCSVFileIndex()];
+            var fileName = this.csvFiles[this._getCSVFileIndex()].data;
 
             this._loadCSVDataset(fileName);
         },
 
         _prevDataset: function(){
             this._setCSVFileIndex(-1);
-            var fileName = this.csvFiles[this._getCSVFileIndex()];
+            var fileName = this.csvFiles[this._getCSVFileIndex()].data;
 
             this._loadCSVDataset(fileName);
         },
@@ -585,7 +585,7 @@
                 .attr('id', 'navbar_title')
                 .attr('x', this.width/2)
                 .attr('y', 35)
-                .text("Station Data: " + this.csvFiles[this.csvFileIndex]);
+                .text(this.csvFiles[this.csvFileIndex].name);
 
             // Add nav-bar controls if more than one dataset is available
             if( this.csvFiles.length > 1 ){
@@ -682,6 +682,7 @@
                 .attr('x', 185)
                 .attr('y', 261)
                 .text(this.datasetStatistics.avg_kilopascal.toFixed(2) + 'kPa');
+
         },
 
         _addControlPanel: function(){          
@@ -1136,7 +1137,7 @@
 
         dataset: null,
         containerId: null,
-        yOrigin: 280,
+        yOrigin: 305,
         xOrigin: 15,
         radius: 150,
         padding: 20,
@@ -1178,7 +1179,28 @@
             // Add group for wind rose
             this.windrose = svg.append('g')
                 .attr('id','windrose');
-    
+
+            this.windrose.append('rect')
+                .attr('class','panel_background')
+                .attr('x', 15)
+                .attr('y', 280)
+                .attr('width', 300)
+                .attr('height', 325);
+
+            // Title Bar and Label
+            this.windrose.append('rect')
+            .attr('class','panel_title_background')
+                .attr('x', 15)
+                .attr('y', 280)
+                .attr('width', 300)
+                .attr('height', 26);
+
+            this.windrose.append('text')
+                .attr('class', 'panel_title')
+                .attr('x', 25)
+                .attr('y', 300)
+                .text(_loc('Wind Direction Frequency'));
+
             // Display Wind Rose Axis
             this._displayWindRoseAxis();
 
@@ -1273,7 +1295,7 @@
                 .each(function(d) { 
                     d.outerRadius = 0; 
                 })
-                .attr('d', arc)                          
+                .attr('d', arc)
                 .transition()
                     .duration(1000)
                     .each(function(d) {
