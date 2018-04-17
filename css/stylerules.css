@@ -115,7 +115,9 @@ svg#weather_data_visualization .axis text.axis_label {
     text-anchor: middle;
     fill: #dddddd;
     font-family: arial;
-    font-size: 2em;
+    font-size: 2.4em;
+    font-weight: bold;
+    font-variant-caps: small-caps;
 }
 
 #navbar_left_btn,

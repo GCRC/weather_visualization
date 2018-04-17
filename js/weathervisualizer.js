@@ -40,7 +40,16 @@
             
             var _this = this;
 
-            this.dataset = {};
+            // Define initial structure of the dataset
+            this.dataset = {
+                filtered: [],
+                original: [],
+                statistics: {}
+            };
+
+            // Create a new Weather Data Tools object
+            // Used for various data processing tasks
+            this.dataTools = new WeatherDataTools();
 
             if( opts.config && opts.config.directory && opts.config.directory.dispatchService){
 
@@ -56,7 +65,7 @@
                 this.dispatchService.register(DH, 'prevCSVDataset', f);
                 this.dispatchService.register(DH, 'updateFilterDateRange', f);
             } else {
-                throw new Error('dispatchService must be specified');
+                throw new Error('Dispatch Service must be specified');
             };
 
             if( opts.widgetOptions ){ 
@@ -110,37 +119,355 @@
             };            
         },
 
-        _convertDates: function(dataset){
+        _getCSVFileIndex: function(){
+            return this.csvFileIndex;
+        },
+
+        _setCSVFileIndex: function(indexChange){
+            var numOFCSVFiles = this.csvFiles.length;
+            var currentIndex = this._getCSVFileIndex();
+
+            if( (currentIndex + indexChange) >= numOFCSVFiles ){
+                this.csvFileIndex = 0;
+
+            } else if ((currentIndex + indexChange) < 0){
+                this.csvFileIndex = numOFCSVFiles - 1;
+            } else {
+                this.csvFileIndex = currentIndex + indexChange;
+            };
+        },
+
+        _nextDataset: function(){
+            this._setCSVFileIndex(1);
+            var fileName = this.csvFiles[this._getCSVFileIndex()].data;
+
+            this._loadCSVDataset(fileName);
+        },
+
+        _prevDataset: function(){
+            this._setCSVFileIndex(-1);
+            var fileName = this.csvFiles[this._getCSVFileIndex()].data;
+
+            this._loadCSVDataset(fileName);
+        },
+
+        _filterDateRange: function(){
+            var _this = this;
+
+            var filteredDataset = this.dataset.original.filter(function(row) {
+                var rowDate = row.date.valueOf();
+                if( rowDate >= _this.dataset.statistics.filterStartDate && rowDate <= _this.dataset.statistics.filterEndDate){
+                    return row;
+                };
+            });
+
+            var updatedDataset = {
+                filtered: filteredDataset
+            };
+
+            this._updateDataset(updatedDataset);
+
+        },
+
+        _updateDateRange: function(dateRanges){
+            // Update minDate statistic
+            if( dateRanges.minDate ) this.dataset.statistics.minDate = dateRanges.minDate;
+            // Update maxDate statistic
+            if( dateRanges.maxDate ) this.dataset.statistics.maxDate = dateRanges.maxDate;
+            // Update filterStartDate statistic
+            if( dateRanges.filterStartDate ) this.dataset.statistics.filterStartDate = dateRanges.filterStartDate;
+            // Update filterEndDate statistic
+            if( dateRanges.filterEndDate ) this.dataset.statistics.filterEndDate = dateRanges.filterEndDate;
+        },
+
+        _updateDataset: function(updatedDataset){
+            // Update original dataset
+            if( updatedDataset.original ) this.dataset.original = updatedDataset.original;
+            // Update filtered dataset
+            if( updatedDataset.filtered ) this.dataset.filtered = updatedDataset.filtered;
+
+            // Massage filtered datasets:
+            // ----------------------------------------------------------
+            // Re-calculate averages for air temp, wind speed, and pressure values
+            var filteredData = this.dataset.filtered;
+            this.dataset.statistics["avg_temp_air"] = this.dataTools.calcAvg(filteredData, "temp_air");
+            this.dataset.statistics["avg_kmperhour_wind_speed"] = this.dataTools.calcAvg(filteredData, "kmperhour_wind_speed");
+            this.dataset.statistics["avg_kilopascal"] = this.dataTools.calcAvg(filteredData, "kilopascal");
+            // Classify wind dirs for Wind Rose
+            this.dataset.statistics["wind_rose"] = this.dataTools.classifyWindDirs(filteredData);
+
+            this._drawVisualization();
+        },
+
+        _loadCSVDataset: function(csvFile){
+            var _this = this;
+
+            $d.csv(csvFile, function(d){
+                var dataset = {};
+                // filter out all rows with null air temperture, wind speed and barometric pressure values from the dataset
+                var originalDataset = d.filter(function(d) {
+                    var noDataValue = "-9999";
+                    if( d.temp_air !== noDataValue && d.pressure !== noDataValue && d.wind_speed !== noDataValue ){
+                        return d;
+                    };
+                });
+
+                // Convert dates, pressure and wind speed. 
+                originalDataset = _this.dataTools.convertDates(originalDataset);
+                originalDataset = _this.dataTools.convertPressure(originalDataset);
+                originalDataset = _this.dataTools.convertWindSpeed(originalDataset);
+
+                // Calculate the initial date range of the entire dataset 
+                // and then updated the date range
+                var initialDateRange = _this.dataTools.calcDateRange(originalDataset);
+                _this._updateDateRange(initialDateRange);                
+
+                dataset = {
+                    original: originalDataset,
+                    filtered: originalDataset
+                };
+
+                _this._updateDataset(dataset);
+            });
+        },
+        
+        _addGradientDefinition: function(){
+            // Define and add a fill gradient for use by the line graph
+            var svg = $d.select(this.containerId + ' svg');
+
+            // Add a defs element if it doesn't exist
+            if( svg.select('defs').empty() ){
+                svg.append('defs');
+            };
+
+            var defs = svg.select('defs');
+
+            if( defs.select('#areaFillGradient').empty() ){
+                // Add linear gradient to defs element
+                var linearGradient = defs.append('linearGradient')
+                    .attr('id','areaFillGradient')
+                    .attr("x1",'0%')
+                    .attr("y1",'0%')
+                    .attr("x2",'0%')
+                    .attr('y2','100%');
+
+                linearGradient.append('stop')
+                    .attr('offset', '0%')
+                    .attr('stop-opacity', 0.8)
+                    .attr('stop-color', '#0191c7');
+
+                linearGradient.append('stop')
+                    .attr('offset', '100%')
+                    .attr('stop-opacity', 0)
+                    .attr('stop-color', '#0191c7');
+            };
+        },
+
+        // Draw Weather Visualization
+        _drawVisualization: function(){
+
+            // If svg already exists remove it before creating a new one
+            if (!$d.select(this.containerId + ' svg').empty() ){
+                $d.select('svg').remove();
+            };
+    
+            // Add svg to container 
+            var svg = $d.select(this.containerId)
+                .append('svg')
+                    .attr('id', 'weather_data_visualization')
+                    .attr('width', this.width)
+                    .attr('height', this.height)
+                    .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
+    
+            // Add gradient definition
+            this._addGradientDefinition();
+            
+            var lineGraphTopMargin = 20;
+            var previousLineGraphBottomPadding = 45;
+            var lineGraphLeftMargin = 385;
+            var navBarHeight = 50;
+            
+            // --------------------------------------------------
+            // Add line graphs to the svg
+            var airTempGraphProperties = {
+                containerId: this.containerId,
+                dataset: this.dataset.filtered,
+                dependentVar: "temp_air",
+                dependentLabel: "Air Temp °C",
+                dispatchService: this.dispatchService,
+                width: this.width - lineGraphLeftMargin,
+                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
+                leftMargin: lineGraphLeftMargin,
+                topMargin: navBarHeight + lineGraphTopMargin
+            };
+
+            var windSpeedGraphProperties = {
+                containerId: this.containerId,
+                dataset: this.dataset.filtered,
+                dependentVar: "kmperhour_wind_speed",
+                dependentLabel: "Wind Speed km/hr",
+                dispatchService: this.dispatchService,
+                width: this.width - lineGraphLeftMargin,
+                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
+                leftMargin: lineGraphLeftMargin,
+                topMargin: lineGraphTopMargin + ((this.height - navBarHeight)/3) + previousLineGraphBottomPadding
+            };
+
+            var pressureGraphProperties = {
+                containerId: this.containerId,
+                dataset: this.dataset.filtered,
+                dependentVar: "kilopascal",
+                dependentLabel: "Pressure kPa",
+                dispatchService: this.dispatchService,
+                width: this.width - lineGraphLeftMargin,
+                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
+                leftMargin: lineGraphLeftMargin,
+                topMargin: lineGraphTopMargin + (((this.height - navBarHeight)/3)*2) + previousLineGraphBottomPadding
+            };
+    
+            var tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
+            var windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
+            var pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
+
+            // --------------------------------------------------
+            // Create a new Wind Rose
+            var windRoseParameters = {
+                containerId: this.containerId,
+                dispatchService: this.dispatchService,
+                dataset: this.dataset.statistics.wind_rose
+            };
+
+            var windRose = new WindRose(windRoseParameters);
+
+            // --------------------------------------------------
+            // Create new control/display panels
+            var controlPanelParameters = {
+                containerId: this.containerId,
+                dispatchService: this.dispatchService,
+                csvFiles: this.csvFiles,
+                csvFileIndex: this.csvFileIndex,
+                datasetStatistics: this.dataset.statistics,
+                width: this.width,
+                navBarHeight: navBarHeight
+            };
+            
+            var controlPanel = new WeatherDataController(controlPanelParameters);
+        },
+
+        _handle: function(m){
+            if( 'windowResized' === m.type ){
+                // Update svg width and height
+                this._getWindowHeight(m);
+                this._getWindowWidth(m);
+
+                // Re-draw visualization
+                this._drawVisualization();
+
+            } else if( 'nextCSVDataset' === m.type ){
+                // Update dataset with next one
+                this._nextDataset();
+
+            } else if( 'prevCSVDataset' === m.type ){
+                // Update dataset with prev one
+                this._prevDataset();
+
+            } else if( 'updateFilterDateRange' === m.type ){
+                var filterDateRanges = {
+                    filterStartDate: m.filterStartDate,
+                    filterEndDate: m.filterEndDate
+                };
+                this._updateDateRange(filterDateRanges);
+                this._filterDateRange();
+
+            };
+        }   
+    });
+
+    var WeatherDataTools = $n2.Class('WeatherDataTools', {
+
+        // Calculate the average value of a provided dataset dependent variable property
+        calcAvg: function(dataset, dependentVar){
+            var mean = $d.mean(dataset, function(d){
+                return(d[dependentVar]);
+            });
+
+            return mean;
+        },
+
+        // Calculate the date range of a provided dataset
+        calcDateRange: function(dataset){
+            var dateRange = {};
+
+            // Loop through all filtered data and identify start and end time range
+            for( var i = 0, e = dataset.length; i < e; i++ ){
+
+                var row = dataset[i];
+                var dateValue = row.date.valueOf();
+
+                if( dateRange.hasOwnProperty('filterStartDate') ){
+                    if( dateRange.filterStartDate > dateValue ){
+                        dateRange.filterStartDate = dateValue;
+                        dateRange.minDate = dateValue;
+                    };
+
+                } else {
+                    dateRange.filterStartDate = dateValue;
+                    dateRange.minDate = dateValue;
+                };
+
+                if (dateRange.hasOwnProperty('filterEndDate')){
+                    if ( dateRange.filterEndDate < dateValue ){
+                        dateRange.filterEndDate = dateValue;
+                        dateRange.maxDate = dateValue;
+                    };
+
+                } else {
+                    dateRange.filterEndDate = dateValue;
+                    dateRange.maxDate = dateValue;
+                };
+
+            };
+
+            return dateRange;
+        },
+
+        // Convert temporal date properties in dataset into a date object
+        convertDates: function(dataset){
             // Loop through all filtered data and add date objects based on temporal coloumn data
             for( var i = 0, e = dataset.length; i < e; i++ ){
 
                 var row = dataset[i];
-                var year = row.year;
-                var month = row.month -1; // month range = 0 - 11 
-                var day = row.day;
-                var hour = row.hour;
-
-                // Add date property to row containing a new date object
-                row.date = new Date(year, month, day, hour);
+                if ( row.year && row.month && row.day && row.hour ){
+                    var year = row.year;
+                    var month = row.month -1; // month range = 0 - 11 
+                    var day = row.day;
+                    var hour = row.hour;
+    
+                    // Add date property to row containing a new date object
+                    row.date = new Date(year, month, day, hour);
+                };
             };
             return dataset;
         },
 
-        _convertPressure: function(dataset){
-            // Loop through all filtered data and add converted kilopascal value
+        // Convert pressure to hectopascal to kilopascale
+        // A new property kilopascal contains the converted value
+        convertPressure: function(dataset){
+
             for( var i = 0, e = dataset.length; i < e; i++ ){
-
                 var row = dataset[i];
-                var hectopascal = row.pressure;
                 var conversionFactor = 0.1;
-
-                row.kilopascal = hectopascal * conversionFactor;
+                if ( row.pressure ) {
+                    var hectopascal = row.pressure;
+                    row.kilopascal = hectopascal * conversionFactor;
+                };
             };
             return dataset;
         },
 
-        _convertWindSpeed: function(dataset){
-            // Loop through all filtered data and add converted km/h windspeed value
+        // Convert wind speed from m/sec to km/sec
+        // A new property kmperhour_wind_speed contains the converted value
+        convertWindSpeed: function(dataset){
             for( var i = 0, e = dataset.length; i < e; i++ ){
 
                 var row = dataset[i];
@@ -152,24 +479,11 @@
             return dataset;
         },
 
-        _calcAverage: function(dependentVar){
-            var dataset = this.dataset.filtered;
-
-            var mean = $d.mean(dataset, function(d){
-                return(d[dependentVar]);
-            });
-
-            // If dataset statistics property doesn't exist, add it
-            if( !this.dataset.statistics ){
-                this.dataset.statistics = {};
-            };
-
-            // Update statistics for avg of dependent variable
-            this.dataset.statistics["avg_" + dependentVar] = mean;
-        },
-
-        _classifyWindDirs: function(){
-            var dataset = this.dataset.filtered;
+        // Generates the classification information needed for the wind rose
+        classifyWindDirs: function(dataset){
+            // Definie the initial structure of the wind rose classification
+            // Contains the wind direction, and corresponding angles for the 
+            // wind rose arc it will represent
             var windRoseClassification = [
                 { dir:'N', count:0, startAngle: 6.086836, endAngle: 6.479535 },
                 { dir:'NNE', count:0, startAngle: 0.1963495, endAngle: 0.5890486 },
@@ -224,286 +538,9 @@
                 else if( windDir > 303.75 && windDir <= 326.25 ) incrementWindDir('NW');
                 else if( windDir > 326.25 && windDir <= 348.75 ) incrementWindDir('NNW');
             };
-        
-            // If dataset statistics property doesn't exist, add it
-            if( !this.dataset.statistics ){
-                this.dataset.statistics = {};
-            };
 
-            // Update statistics for wind rose classification
-            this.dataset.statistics["wind_rose"] = windRoseClassification;
-        },
-
-        _calcInitialDateRange: function(dataset){
-            var dateRange = {};
-
-            // Loop through all filtered data and identify start and end time range
-            for( var i = 0, e = dataset.length; i < e; i++ ){
-
-                var row = dataset[i];
-                var dateValue = row.date.valueOf();
-
-                if( dateRange.hasOwnProperty('filterStartDate') ){
-                    if( dateRange.filterStartDate > dateValue ){
-                        dateRange.filterStartDate = dateValue;
-                        dateRange.minDate = dateValue;
-                    };
-
-                } else {
-                    dateRange.filterStartDate = dateValue;
-                    dateRange.minDate = dateValue;
-                };
-
-                if (dateRange.hasOwnProperty('filterEndDate')){
-                    if ( dateRange.filterEndDate < dateValue ){
-                        dateRange.filterEndDate = dateValue;
-                        dateRange.maxDate = dateValue;
-                    };
-
-                } else {
-                    dateRange.filterEndDate = dateValue;
-                    dateRange.maxDate = dateValue;
-                };
-
-            };
-            this._updateDateRange(dateRange);
-        },
-
-        _getCSVFileIndex: function(){
-            return this.csvFileIndex;
-        },
-
-        _setCSVFileIndex: function(indexChange){
-            var numOFCSVFiles = this.csvFiles.length;
-            var currentIndex = this._getCSVFileIndex();
-
-            if( (currentIndex + indexChange) >= numOFCSVFiles ){
-                this.csvFileIndex = 0;
-
-            } else if ((currentIndex + indexChange) < 0){
-                this.csvFileIndex = numOFCSVFiles - 1;
-            } else {
-                this.csvFileIndex = currentIndex + indexChange;
-            };
-        },
-
-        _nextDataset: function(){
-            this._setCSVFileIndex(1);
-            var fileName = this.csvFiles[this._getCSVFileIndex()].data;
-
-            this._loadCSVDataset(fileName);
-        },
-
-        _prevDataset: function(){
-            this._setCSVFileIndex(-1);
-            var fileName = this.csvFiles[this._getCSVFileIndex()].data;
-
-            this._loadCSVDataset(fileName);
-        },
-
-        _filterDateRange: function(){
-            var _this = this;
-
-            var filteredDataset = this.dataset.original.filter(function(row) {
-                var rowDate = row.date.valueOf();
-                if( rowDate >= _this.dataset.statistics.filterStartDate && rowDate <= _this.dataset.statistics.filterEndDate){
-                    return row;
-                };
-            });
-
-            var updatedDataset = {
-                filtered: filteredDataset
-            };
-
-            this._updateDataset(updatedDataset);
-
-        },
-
-        _updateDateRange: function(dateRanges){
-            // Create statistics object if it doesn't exist
-            if( !this.dataset.statistics ) this.dataset.statistics = {};
-
-            // Update minDate statistic
-            if( dateRanges.minDate ) this.dataset.statistics.minDate = dateRanges.minDate;
-
-            // Update maxDate statistic
-            if( dateRanges.maxDate ) this.dataset.statistics.maxDate = dateRanges.maxDate;
-
-            // Update filterStartDate statistic
-            if( dateRanges.filterStartDate ) this.dataset.statistics.filterStartDate = dateRanges.filterStartDate;
-
-            // Update filterEndDate statistic
-            if( dateRanges.filterEndDate ) this.dataset.statistics.filterEndDate = dateRanges.filterEndDate;
-        },
-
-        _updateDataset: function(updatedDataset){
-            // Create original dataset array if it doesn't exist
-            if( !this.dataset.original ) this.dataset.original = [];
-
-            // Create filteted dataset array if it doesn't exist
-            if( !this.dataset.filtered ) this.dataset.filtered = [];
-
-            // Update original dataset
-            if( updatedDataset.original ) this.dataset.original = updatedDataset.original;
-
-            // Update filtered dataset
-            if( updatedDataset.filtered ) this.dataset.filtered = updatedDataset.filtered;
-
-            // Re-calculate averages for air temp, wind speed, and pressure values
-            this._calcAverage("temp_air");
-            this._calcAverage("kmperhour_wind_speed");
-            this._calcAverage("kilopascal");
-
-            // Classify wind dirs for Wind Rose
-            this._classifyWindDirs();
-
-            this._drawVisualization();
-        },
-
-        _loadCSVDataset: function(csvFile){
-            var _this = this;
-
-            $d.csv(csvFile, function(d){
-                var dataset = {};
-                // filter out all rows with null air temperture, wind speed and barometric pressure values from the dataset
-                var originalDataset = d.filter(function(d) {
-                    var noDataValue = "-9999";
-                    if( d.temp_air !== noDataValue && d.pressure !== noDataValue && d.wind_speed !== noDataValue ){
-                        return d;
-                    };
-                });
-
-                // Convert dates, pressure and wind speed. 
-                originalDataset = _this._convertDates(originalDataset);
-                originalDataset = _this._convertPressure(originalDataset);
-                originalDataset = _this._convertWindSpeed(originalDataset);
-
-                // Calculate the initial date range of the entire dataset if date statistics are not defined
-                _this._calcInitialDateRange(originalDataset);
-
-                dataset = {
-                    original: originalDataset,
-                    filtered: originalDataset
-                };
-
-                _this._updateDataset(dataset);
-            });
-        },
-        
-        // Draw Weather Visualization
-        _drawVisualization: function(){
-
-            // If svg already exists remove it before creating a new one
-            if (!$d.select(this.containerId + ' svg').empty() ){
-                $d.select('svg').remove();
-            };
-    
-            // Draw svg 
-            var svg = $d.select(this.containerId)
-                .append('svg')
-                    .attr('id', 'weather_data_visualization')
-                    .attr('width', this.width)
-                    .attr('height', this.height)
-                    .attr("transform", "translate(" + this.svgPadding + "," + this.svgPadding + ")");
-    
-            var lineGraphTopMargin = 20;
-            var previousLineGraphBottomPadding = 45;
-            var lineGraphLeftMargin = 385;
-            var navBarHeight = 50;
-            
-            // --------------------------------------------------
-            var airTempGraphProperties = {
-                containerId: this.containerId,
-                dataset: this.dataset.filtered,
-                dependentVar: "temp_air",
-                dependentLabel: "Air Temp °C",
-                dispatchService: this.dispatchService,
-                width: this.width - lineGraphLeftMargin,
-                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
-                leftMargin: lineGraphLeftMargin,
-                topMargin: navBarHeight + lineGraphTopMargin
-            };
-
-            var windSpeedGraphProperties = {
-                containerId: this.containerId,
-                dataset: this.dataset.filtered,
-                dependentVar: "kmperhour_wind_speed",
-                dependentLabel: "Wind Speed km/hr",
-                dispatchService: this.dispatchService,
-                width: this.width - lineGraphLeftMargin,
-                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
-                leftMargin: lineGraphLeftMargin,
-                topMargin: lineGraphTopMargin + ((this.height - navBarHeight)/3) + previousLineGraphBottomPadding
-            };
-
-            var pressureGraphProperties = {
-                containerId: this.containerId,
-                dataset: this.dataset.filtered,
-                dependentVar: "kilopascal",
-                dependentLabel: "Pressure kPa",
-                dispatchService: this.dispatchService,
-                width: this.width - lineGraphLeftMargin,
-                height: ((this.height - navBarHeight)/3) - lineGraphTopMargin,
-                leftMargin: lineGraphLeftMargin,
-                topMargin: lineGraphTopMargin + (((this.height - navBarHeight)/3)*2) + previousLineGraphBottomPadding
-            };
-    
-            // Add line graphs to the svg
-            var tempGraph = new WeatherDataVisualizerLineGraph(airTempGraphProperties);
-            var windSpeedGraph = new WeatherDataVisualizerLineGraph(windSpeedGraphProperties);
-            var pressureGraph = new WeatherDataVisualizerLineGraph(pressureGraphProperties);
-
-            // --------------------------------------------------
-            var windRoseParameters = {
-                containerId: this.containerId,
-                dispatchService: this.dispatchService,
-                dataset: this.dataset.statistics.wind_rose
-            };
-
-            // Create a new Wind Rose
-            var windRose = new WindRose(windRoseParameters);
-
-            // --------------------------------------------------
-            var controlPanelParameters = {
-                containerId: this.containerId,
-                dispatchService: this.dispatchService,
-                csvFiles: this.csvFiles,
-                csvFileIndex: this.csvFileIndex,
-                datasetStatistics: this.dataset.statistics,
-                width: this.width,
-                navBarHeight: navBarHeight
-            };
-
-            // Create a new control panel
-            var controlPanel = new WeatherDataController(controlPanelParameters);
-        },
-
-        _handle: function(m){
-            if( 'windowResized' === m.type ){
-                // Update svg width and height
-                this._getWindowHeight(m);
-                this._getWindowWidth(m);
-
-                // Re-draw visualization
-                this._drawVisualization();
-
-            } else if( 'nextCSVDataset' === m.type ){
-                // Update dataset with next one
-                this._nextDataset();
-
-            } else if( 'prevCSVDataset' === m.type ){
-                // Update dataset with prev one
-                this._prevDataset();
-
-            } else if( 'updateFilterDateRange' === m.type ){
-                var filterDateRanges = {
-                    filterStartDate: m.filterStartDate,
-                    filterEndDate: m.filterEndDate
-                };
-                this._updateDateRange(filterDateRanges);
-                this._filterDateRange();
-            };
-        }   
+            return windRoseClassification;
+        }
     });
 
     var WeatherDataController = $n2.Class('WeatherDataController', {
@@ -649,7 +686,7 @@
                 .attr('class', 'avg_display_label')
                 .attr('x', 25)
                 .attr('y', 221)
-                .text(_loc('Air Temp:'));
+                .text(_loc('Air Temperature:'));
 
             avgDisplay.append('text')
                 .attr('class', 'avg_display_value')
@@ -852,36 +889,6 @@
                 throw new Error('Top margin not provided for line graph');
             };
 
-            // Define and add a fill gradient for use by the line graph
-            var svg = $d.select(this.containerId + ' svg');
-
-            // Add a defs element if it doesn't exist
-            if( svg.select('defs').empty() ){
-                svg.append('defs');
-            };
-
-            var defs = svg.select('defs');
-
-            if( defs.select('#areaFillGradient').empty() ){
-                // Add linear gradient to defs element
-                var linearGradient = defs.append('linearGradient')
-                    .attr('id','areaFillGradient')
-                    .attr("x1",'0%')
-                    .attr("y1",'0%')
-                    .attr("x2",'0%')
-                    .attr('y2','100%');
-
-                linearGradient.append('stop')
-                    .attr('offset', '0%')
-                    .attr('stop-opacity', 0.8)
-                    .attr('stop-color', '#0191c7');
-
-                linearGradient.append('stop')
-                    .attr('offset', '100%')
-                    .attr('stop-opacity', 0)
-                    .attr('stop-color', '#0191c7');
-            };
-
             // Define Scales
             this.xScale = this._defineXScale();
             this.yScale = this._defineYScale();
@@ -964,6 +971,12 @@
 
             var onMouseMovement = function(){
 
+                function getDependentVarUnits(){
+                    if ( _this.dependentVar  === "temp_air" ) return " °C";
+                    else if ( _this.dependentVar  === "kmperhour_wind_speed" ) return " km/hr";
+                    else if ( _this.dependentVar  === "kilopascal" ) return " kPa";
+                };
+
                 // Get the date based on the mouse x position
                 var mouseXDate = _this.xScale.invert($d.mouse(this)[0] - _this.leftMargin);
 
@@ -976,7 +989,7 @@
 
                 // Select the closest date value to the mouse x position
                 var d = mouseXDate - prevDate.date > nextDate.date - mouseXDate ? nextDate : prevDate;
-    
+
                 // Update tool tip marker location
                 toolTip.select('#' + graphId + '_tool_tip_marker')
                     .attr("transform", "translate(" + (_this.xScale(d.date) + _this.leftMargin) + "," + (_this.yScale(d[_this.dependentVar]) + _this.topMargin ) + ")");
@@ -990,7 +1003,7 @@
                 // Update the tool tip text content and location
                 toolTip.select('#' + graphId + '_tool_tip_label_dependent')
                     .attr("transform", "translate(" + (_this.xScale(d.date) + _this.leftMargin) + "," + (_this.yScale(d[_this.dependentVar]) + _this.topMargin ) + ")")
-                    .text(parseFloat(d[_this.dependentVar]).toFixed(2))
+                    .text(parseFloat(d[_this.dependentVar]).toFixed(2) + getDependentVarUnits())
                     .attr('text-anchor', calcLabelAnchor(d));
             };
 
@@ -1023,14 +1036,14 @@
                 .attr('id', graphId + '_tool_tip_label_date')
                 .attr('class','tool_tip_label')
                 .attr('dx', 0)
-                .attr('dy', 0);
+                .attr('dy', '-1.7em');
 
             // Dependent Variable Label
             toolTip.append('text')
                 .attr('id', graphId + '_tool_tip_label_dependent')
                 .attr('class','tool_tip_label')
                 .attr('dx', 0)
-                .attr('dy', '1.1em');
+                .attr('dy', '-0.7em');
         },
 
         _drawLineGraph: function(){
@@ -1125,7 +1138,7 @@
 
             // Added xAxis label
             xAxis.append("text")
-                .text("Date (DD/MM/YY)")
+                .text("Date")
                 .attr("class","axis_label")
                 .attr("x",_this.width/2)
                 .attr("y",40);
