@@ -64,6 +64,7 @@
                 this.dispatchService.register(DH, 'nextCSVDataset', f);
                 this.dispatchService.register(DH, 'prevCSVDataset', f);
                 this.dispatchService.register(DH, 'updateFilterDateRange', f);
+
             } else {
                 throw new Error('Dispatch Service must be specified');
             };
@@ -987,7 +988,7 @@
                 var prevDate = _this.dataset[i - 1];
                 var nextDate = _this.dataset[i];
 
-                // Select the closest date value to the mouse x position
+                // Select record based on the closest date value to the mouse x position
                 var d = mouseXDate - prevDate.date > nextDate.date - mouseXDate ? nextDate : prevDate;
 
                 // Update tool tip marker location
@@ -1299,7 +1300,7 @@
                 .attr('transform','translate(' + (this.radius + this.xOrigin) + ', ' + (this.radius + this.yOrigin) + ')');
 
                 
-            // Generate Arcs
+            // Generate Arcs representing wind direction frequency
             arcsGroup.selectAll('path')
                 .data(this.dataset)
                 .enter()
